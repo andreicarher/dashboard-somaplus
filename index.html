@@ -1,1315 +1,633 @@
-import { useState } from "react";
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  Cell, LineChart, Line, Legend, ComposedChart, ReferenceLine, Area, AreaChart
-} from "recharts";
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOMA+ · Modelo de Proyecciones 2026</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
 
-const C = {
-  navy:"#0d1b2e", navyL:"#162236", navyM:"#1e3050", navyD:"#091524",
-  gold:"#f0a500", goldL:"#fbbf24",
-  teal:"#22d3ee", red:"#f43f5e", green:"#10b981",
-  purple:"#818cf8", orange:"#fb923c", pink:"#ec4899",
-  muted:"#64748b", text:"#e2e8f0", textM:"#94a3b8",
-};
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-// ── DATOS ──────────────────────────────────────────────────────
+  :root {
+    --bg:        #0C0C0E;
+    --bg2:       #131316;
+    --bg3:       #1A1A1F;
+    --border:    #2A2A32;
+    --border2:   #222228;
+    --text:      #F0EFE8;
+    --text2:     #9B9AA3;
+    --text3:     #5C5B66;
+    --accent:    #7B6EF6;
+    --accent2:   #5045CC;
+    --green:     #2ECC8F;
+    --green2:    #1A7A55;
+    --yellow:    #F0A842;
+    --red:       #E05252;
+    --blue:      #5B9CF6;
+    --mono:      'DM Mono', monospace;
+  }
 
-const monthlyPaid = [
-  { mes:"Ene", label:"Enero",   inv:25539, total:125, noContact:94, mini:35, cod:9,  dx:2, ace:0, rec:2,  cpl:204,  cpMini:730,  cpCod:2838 },
-  { mes:"Feb", label:"Febrero", inv:23852, total:102, noContact:70, mini:34, cod:11, dx:0, ace:0, rec:10, cpl:234,  cpMini:702,  cpCod:2168 },
-  { mes:"Mar", label:"Marzo",   inv:24402, total:34,  noContact:19, mini:14, cod:12, dx:3, ace:1, rec:4,  cpl:718,  cpMini:1743, cpCod:2034 },
-  { mes:"Abr", label:"Abril",   inv:24505, total:58,  noContact:30, mini:28, cod:17, dx:2, ace:0, rec:9,  cpl:422,  cpMini:875,  cpCod:1441 },
-  { mes:"May", label:"Mayo",    inv:21672, total:69,  noContact:53, mini:16, cod:7,  dx:0, ace:1, rec:4,  cpl:314,  cpMini:1354, cpCod:3096 },
-];
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.5;
+  }
 
-const weeklyPaid = [
-  { sem:"Ene 5",  inv:6385, total:37, noContact:32, mini:7,  cod:2,  dx:1, ace:0, rec:0, cpl:173,  cpMini:912,  cpCod:3192 },
-  { sem:"Ene 12", inv:6385, total:18, noContact:11, mini:6,  cod:1,  dx:0, ace:0, rec:0, cpl:355,  cpMini:1064, cpCod:6385 },
-  { sem:"Ene 19", inv:6385, total:37, noContact:28, mini:9,  cod:3,  dx:0, ace:0, rec:0, cpl:173,  cpMini:709,  cpCod:2128 },
-  { sem:"Ene 26", inv:6385, total:33, noContact:23, mini:13, cod:3,  dx:1, ace:0, rec:2, cpl:193,  cpMini:491,  cpCod:2128 },
-  { sem:"Feb 2",  inv:5963, total:23, noContact:13, mini:10, cod:0,  dx:0, ace:0, rec:5, cpl:259,  cpMini:596,  cpCod:0    },
-  { sem:"Feb 9",  inv:5963, total:19, noContact:12, mini:6,  cod:3,  dx:0, ace:0, rec:1, cpl:314,  cpMini:994,  cpCod:1988 },
-  { sem:"Feb 16", inv:5963, total:24, noContact:16, mini:8,  cod:3,  dx:0, ace:0, rec:0, cpl:248,  cpMini:745,  cpCod:1988 },
-  { sem:"Feb 23", inv:5963, total:36, noContact:29, mini:10, cod:5,  dx:0, ace:0, rec:4, cpl:166,  cpMini:596,  cpCod:1193 },
-  { sem:"Mar 2",  inv:4880, total:15, noContact:9,  mini:5,  cod:4,  dx:0, ace:0, rec:2, cpl:325,  cpMini:976,  cpCod:1220 },
-  { sem:"Mar 9",  inv:4880, total:3,  noContact:0,  mini:3,  cod:3,  dx:1, ace:1, rec:0, cpl:1627, cpMini:1627, cpCod:1627, highlight:"cierre" },
-  { sem:"Mar 16", inv:4880, total:4,  noContact:2,  mini:2,  cod:2,  dx:1, ace:0, rec:1, cpl:1220, cpMini:2440, cpCod:2440 },
-  { sem:"Mar 23", inv:4880, total:5,  noContact:2,  mini:3,  cod:3,  dx:1, ace:0, rec:1, cpl:976,  cpMini:1627, cpCod:1627 },
-  { sem:"Mar 30", inv:4880, total:8,  noContact:6,  mini:2,  cod:1,  dx:1, ace:0, rec:0, cpl:610,  cpMini:2440, cpCod:4880 },
-  { sem:"Abr 6",  inv:6126, total:12, noContact:8,  mini:4,  cod:4,  dx:0, ace:0, rec:1, cpl:511,  cpMini:1532, cpCod:1532 },
-  { sem:"Abr 13", inv:6126, total:13, noContact:4,  mini:9,  cod:6,  dx:0, ace:0, rec:3, cpl:471,  cpMini:681,  cpCod:1021, highlight:"mejor" },
-  { sem:"Abr 20", inv:6126, total:21, noContact:9,  mini:12, cod:5,  dx:1, ace:0, rec:5, cpl:292,  cpMini:511,  cpCod:1225 },
-  { sem:"Abr 27", inv:6126, total:12, noContact:10, mini:2,  cod:1,  dx:0, ace:0, rec:0, cpl:511,  cpMini:3063, cpCod:6126, highlight:"peor" },
-  { sem:"May 4",  inv:5418, total:26, noContact:22, mini:4,  cod:1,  dx:0, ace:0, rec:2, cpl:208,  cpMini:1354, cpCod:5418 },
-  { sem:"May 11", inv:5418, total:12, noContact:9,  mini:3,  cod:1,  dx:0, ace:0, rec:0, cpl:452,  cpMini:1806, cpCod:5418 },
-  { sem:"May 18", inv:5418, total:16, noContact:11, mini:5,  cod:4,  dx:0, ace:0, rec:1, cpl:339,  cpMini:1084, cpCod:1354 },
-  { sem:"May 25", inv:5418, total:14, noContact:10, mini:4,  cod:1,  dx:0, ace:0, rec:1, cpl:387,  cpMini:1354, cpCod:5418 },
-];
+  /* LAYOUT */
+  .shell { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+  .sidebar { background: var(--bg2); border-right: 1px solid var(--border); padding: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; display: flex; flex-direction: column; }
+  .main { padding: 40px 48px; overflow-y: auto; }
 
-const weeklyActivity = [
-  { sem:"Ene 5",  inv:6385,  leads:37, actMini:3,  actCod:0,  cpMini:2128, cpCod:0    },
-  { sem:"Ene 12", inv:6385,  leads:18, actMini:5,  actCod:1,  cpMini:1277, cpCod:6385 },
-  { sem:"Ene 19", inv:6385,  leads:37, actMini:7,  actCod:1,  cpMini:912,  cpCod:6385 },
-  { sem:"Ene 26", inv:6385,  leads:33, actMini:10, actCod:1,  cpMini:638,  cpCod:6385 },
-  { sem:"Feb 2",  inv:5963,  leads:23, actMini:12, actCod:5,  cpMini:497,  cpCod:1193 },
-  { sem:"Feb 9",  inv:5963,  leads:19, actMini:8,  actCod:1,  cpMini:745,  cpCod:5963 },
-  { sem:"Feb 16", inv:5963,  leads:24, actMini:5,  actCod:2,  cpMini:1193, cpCod:2982 },
-  { sem:"Feb 23", inv:5963,  leads:36, actMini:4,  actCod:1,  cpMini:1491, cpCod:5963 },
-  { sem:"Mar 2",  inv:4880,  leads:15, actMini:5,  actCod:1,  cpMini:976,  cpCod:4880 },
-  { sem:"Mar 9",  inv:4880,  leads:3,  actMini:3,  actCod:5,  cpMini:1627, cpCod:976  },
-  { sem:"Mar 16", inv:4880,  leads:4,  actMini:2,  actCod:6,  cpMini:2440, cpCod:813  },
-  { sem:"Mar 23", inv:4880,  leads:5,  actMini:6,  actCod:1,  cpMini:813,  cpCod:4880 },
-  { sem:"Mar 30", inv:4880,  leads:8,  actMini:1,  actCod:0,  cpMini:4880, cpCod:0    },
-  { sem:"Abr 6",  inv:6126,  leads:12, actMini:5,  actCod:5,  cpMini:1225, cpCod:1225 },
-  { sem:"Abr 13", inv:6126,  leads:13, actMini:5,  actCod:7,  cpMini:1225, cpCod:875  },
-  { sem:"Abr 20", inv:6126,  leads:21, actMini:7,  actCod:3,  cpMini:875,  cpCod:2042 },
-  { sem:"Abr 27", inv:6126,  leads:12, actMini:4,  actCod:5,  cpMini:1532, cpCod:1225 },
-  { sem:"May 4",  inv:5418,  leads:26, actMini:8,  actCod:3,  cpMini:677,  cpCod:1806 },
-  { sem:"May 11", inv:5418,  leads:12, actMini:3,  actCod:3,  cpMini:1806, cpCod:1806 },
-  { sem:"May 18", inv:5418,  leads:16, actMini:4,  actCod:4,  cpMini:1354, cpCod:1354 },
-  { sem:"May 25", inv:5418,  leads:14, actMini:3,  actCod:3,  cpMini:1806, cpCod:1806 },
-];
+  /* SIDEBAR */
+  .sidebar-header { padding: 28px 24px 20px; border-bottom: 1px solid var(--border2); }
+  .logo { font-size: 13px; font-weight: 700; letter-spacing: .12em; color: var(--accent); text-transform: uppercase; }
+  .logo-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
 
-const campaignData = [
-  { campana:"Sin UTM",                    tipo:"sin_utm",  n:288, noContact:196, mini:97, cod:45, dx:6,  ace:1, rec:18, sf:2, conv:0.3 },
-  { campana:"Coaching y liderazgo",       tipo:"int",      n:18,  noContact:10,  mini:8,  cod:1,  dx:0,  ace:0, rec:3,  sf:0, conv:0.0 },
-  { campana:"Lookalike engaged",          tipo:"lal",      n:17,  noContact:12,  mini:5,  cod:1,  dx:0,  ace:0, rec:3,  sf:0, conv:0.0 },
-  { campana:"Autoayuda",                  tipo:"int",      n:15,  noContact:13,  mini:2,  cod:1,  dx:0,  ace:0, rec:1,  sf:0, conv:0.0 },
-  { campana:"Lookalike Zoho",             tipo:"lal",      n:15,  noContact:11,  mini:4,  cod:2,  dx:1,  ace:0, rec:0,  sf:1, conv:0.0 },
-  { campana:"Interés deportes",           tipo:"int",      n:13,  noContact:11,  mini:2,  cod:1,  dx:0,  ace:0, rec:1,  sf:0, conv:0.0 },
-  { campana:"Nuevos leads 2026",          tipo:"ro",       n:9,   noContact:2,   mini:7,  cod:4,  dx:0,  ace:0, rec:3,  sf:0, conv:0.0 },
-  { campana:"Luxury",                     tipo:"int",      n:6,   noContact:5,   mini:1,  cod:0,  dx:0,  ace:0, rec:0,  sf:0, conv:0.0 },
-  { campana:"Seguidores IG 90 días",      tipo:"int",      n:2,   noContact:2,   mini:0,  cod:0,  dx:0,  ace:0, rec:0,  sf:0, conv:0.0 },
-  { campana:"Nuevos leads B2C",           tipo:"ro",       n:1,   noContact:1,   mini:0,  cod:0,  dx:0,  ace:0, rec:0,  sf:0, conv:0.0 },
-  { campana:"Bienes raíces",              tipo:"int",      n:1,   noContact:1,   mini:0,  cod:0,  dx:0,  ace:0, rec:0,  sf:0, conv:0.0 },
-  { campana:"Campaña ID (sin nombre)",    tipo:"sin_utm",  n:3,   noContact:2,   mini:1,  cod:1,  dx:0,  ace:0, rec:0,  sf:0, conv:0.0 },
-];
+  .sidebar-section { padding: 16px 24px 8px; }
+  .sidebar-label { font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text3); margin-bottom: 12px; }
 
-const creativeData = [
-  { creative:"Video Luisa VIII",          campana:"Coaching y liderazgo", n:37, noContact:27, mini:10, cod:2, ace:0, conv:0.0 },
-  { creative:"Video Humberto",            campana:"Lookalike engaged",    n:13, noContact:10, mini:3,  cod:1, ace:0, conv:0.0 },
-  { creative:"Video III Luisa (6 Feb)",   campana:"Lookalike Zoho",       n:9,  noContact:5,  mini:4,  cod:2, ace:0, conv:0.0 },
-  { creative:"RTG VID WEB Marimar",       campana:"Luxury",               n:11, noContact:10, mini:1,  cod:1, ace:0, conv:0.0 },
-  { creative:"Campaña 21/08 Ad4",         campana:"Coaching y liderazgo", n:3,  noContact:0,  mini:3,  cod:1, ace:0, conv:0.0 },
-  { creative:"Video Luisa VIII B2B",      campana:"Lookalike Zoho",       n:4,  noContact:2,  mini:2,  cod:1, ace:0, conv:0.0 },
-  { creative:"Campaña 21/08 Ad1",         campana:"Autoayuda",            n:8,  noContact:6,  mini:2,  cod:1, ace:0, conv:0.0 },
-  { creative:"Video Oso 1",               campana:"Coaching y liderazgo", n:2,  noContact:1,  mini:1,  cod:0, ace:0, conv:0.0 },
-  { creative:"Video Oso 2",               campana:"Lookalike Zoho",       n:3,  noContact:2,  mini:1,  cod:0, ace:0, conv:0.0 },
-  { creative:"RTG VID WEB Laura",         campana:"Coaching y liderazgo", n:2,  noContact:2,  mini:0,  cod:0, ace:0, conv:0.0 },
-  { creative:"Campaña 06/11 Ad3",         campana:"Nuevos leads 2026",    n:1,  noContact:0,  mini:1,  cod:1, ace:0, conv:0.0 },
-  { creative:"Campaña 06/11 Ad4",         campana:"Nuevos leads 2026",    n:2,  noContact:1,  mini:1,  cod:0, ace:0, conv:0.0 },
-];
+  .input-group { margin-bottom: 14px; }
+  .input-label { font-size: 11px; color: var(--text2); margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; }
+  .input-label span { font-family: var(--mono); font-size: 11px; color: var(--accent); }
+  .input-wrap { display: flex; align-items: center; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; transition: border-color .15s; }
+  .input-wrap:focus-within { border-color: var(--accent); }
+  .input-prefix, .input-suffix { font-size: 11px; color: var(--text3); padding: 0 8px; font-family: var(--mono); white-space: nowrap; }
+  .input-wrap input[type="number"] { flex: 1; background: transparent; border: none; outline: none; color: var(--text); font-family: var(--mono); font-size: 13px; font-weight: 500; padding: 8px 4px; text-align: right; width: 0; }
+  input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer; }
 
+  .scenario-btns { display: flex; flex-direction: column; gap: 6px; padding: 0 24px 16px; }
+  .sc-btn { padding: 9px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg3); color: var(--text2); font-size: 12px; font-weight: 500; cursor: pointer; text-align: left; transition: all .15s; display: flex; justify-content: space-between; align-items: center; }
+  .sc-btn:hover { border-color: var(--accent); color: var(--text); }
+  .sc-btn.active { border-color: var(--accent); background: #7B6EF618; color: var(--text); }
+  .sc-btn .sc-tag { font-size: 10px; font-family: var(--mono); color: var(--text3); }
+  .sc-btn.active .sc-tag { color: var(--accent); }
 
-// Leads en Seguimiento Final - detalle completo
-const seguimientoFinal = [
-  { nombre:"Jose Nevarez",          fuente:"Referido",      agente:"José Augusto", entrada:"2 Jun",  cod_luisa:"—",         cod_victor:"2 Jun",   dx:"8 Jun",   dias_seguimiento:6,   campana:"Referido",      semaforo:"verde",    nota:"Dx completado ayer (Jun 8) — acción de cierre urgente esta semana." },
-  { nombre:"Mario Jimenez",         fuente:"Instagram",     agente:"José Augusto", entrada:"21 May", cod_luisa:"27 May",    cod_victor:"2 Jun",   dx:"3 Jun",   dias_seguimiento:18,  campana:"Orgánico",      semaforo:"verde",    nota:"Dx completado Jun 3 · 18 días en proceso · Perfil Instagram de alta calidad." },
-  { nombre:"Maria Fernanda Alpizar",fuente:"Rockin",        agente:"José Augusto", entrada:"19 May", cod_luisa:"25 May",    cod_victor:"28 May",  dx:"1 Jun",   dias_seguimiento:20,  campana:"Sin UTM",       semaforo:"verde",    nota:"Dx completado Jun 1 · 20 días en proceso · Seguimiento activo necesario." },
-  { nombre:"Juan Carlos Oropeza",   fuente:"Rel. Públicas", agente:"José Augusto", entrada:"11 May", cod_luisa:"14 May",    cod_victor:"26 May",  dx:"3 Jun",   dias_seguimiento:28,  campana:"Rel. Públicas", semaforo:"amarillo", nota:"Dx completado Jun 3 · 28 días · Rel. Públicas es canal de alta conversión." },
-  { nombre:"Armando Padilla",       fuente:"Rel. Públicas", agente:"José Augusto", entrada:"6 May",  cod_luisa:"19 May",    cod_victor:"—",       dx:"29 May",  dias_seguimiento:33,  campana:"Rel. Públicas", semaforo:"amarillo", nota:"Dx completado May 29 · 33 días · Sin COD Víctor todavía." },
-  { nombre:"Sebastián Medina",      fuente:"Avalanche",     agente:"José Augusto", entrada:"15 Abr", cod_luisa:"—",         cod_victor:"29 Abr",  dx:"2 Jun",   dias_seguimiento:54,  campana:"Avalanche",     semaforo:"rojo",     nota:"54 días · Dx reciente (Jun 2) pero entrada antigua · revisar urgencia." },
-  { nombre:"Gustavo Jimenez Vera",  fuente:"Referido",      agente:"Adán Cortés",  entrada:"15 Abr", cod_luisa:"—",         cod_victor:"16 Abr",  dx:"23 Abr",  dias_seguimiento:54,  campana:"Referido",      semaforo:"rojo",     nota:"54 días · Adán salió del equipo May 4 · lead sin responsable activo." },
-  { nombre:"Mayra Huitrón Morales", fuente:"Rockin",        agente:"José Augusto", entrada:"3 Abr",  cod_luisa:"13 Abr",    cod_victor:"16 Abr",  dx:"22 Abr",  dias_seguimiento:66,  campana:"Sin UTM",       semaforo:"rojo",     nota:"66 días en proceso sin cierre · riesgo alto de enfriamiento." },
-  { nombre:"Martha Garza",          fuente:"Rockin",        agente:"José Augusto", entrada:"25 Mar", cod_luisa:"20 Abr",    cod_victor:"27 Abr",  dx:"19 May",  dias_seguimiento:75,  campana:"Sin UTM",       semaforo:"rojo",     nota:"75 días · el lead más antiguo con Dx completado · decisión necesaria." },
-  { nombre:"Jerónimo Dorbecker",    fuente:"Avalanche",     agente:"José Augusto", entrada:"6 Mar",  cod_luisa:"—",         cod_victor:"8 Abr",   dx:"13 Abr",  dias_seguimiento:94,  campana:"Avalanche",     semaforo:"rojo",     nota:"94 días · muy frío. Evaluar si tiene sentido continuar." },
-  { nombre:"Jorge Jimenez",         fuente:"Avalanche",     agente:"José Augusto", entrada:"25 Feb", cod_luisa:"—",         cod_victor:"1 Abr",   dx:"8 Abr",   dias_seguimiento:103, campana:"Avalanche",     semaforo:"rojo",     nota:"103 días · lead crítico. Definir esta semana: cierra o se descarta." },
-  { nombre:"Guillermo Acosta",      fuente:"Referido",      agente:"José Augusto", entrada:"3 Feb",  cod_luisa:"6 Feb",     cod_victor:"10 Feb",  dx:"17 Feb",  dias_seguimiento:125, campana:"Referido",      semaforo:"rojo",     nota:"125 días · el más antiguo activo. Requiere decisión definitiva." },
-  { nombre:"Alan Ramirez Flores",   fuente:"Avalanche",     agente:"José Augusto", entrada:"6 Ene",  cod_luisa:"3 Mar",     cod_victor:"—",       dx:"—",       dias_seguimiento:153, campana:"Avalanche",     semaforo:"rojo",     nota:"153 días · sin Dx completado · lead más antiguo del pipeline." },
-];
+  .reset-btn { margin: 8px 24px 20px; padding: 8px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--text3); font-size: 11px; cursor: pointer; transition: all .15s; }
+  .reset-btn:hover { border-color: var(--red); color: var(--red); }
 
-// Leads avanzados (post-COD, cercanos a cierre)
-const leadsAvanzados = [
-  { nombre:"Anaid Bolaños",             fase:"Completar diagnóstico",         fuente:"Rockin",       agente:"José Augusto", entrada:"7 Ene",  dias:139, semaforo:"rojo"    },
-  { nombre:"Ricardo Rivera Perez",      fase:"Llamada antes de cita Dx",      fuente:"Rockin",       agente:"José Augusto", entrada:"17 Mar", dias:70,  semaforo:"rojo"    },
-  { nombre:"Margarita Ramirez",         fase:"Envío IntroPack (Luisa)",       fuente:"Rockin",       agente:"José Augusto", entrada:"20 Abr", dias:36,  semaforo:"amarillo"},
-  { nombre:"Rosa María Fragoso",        fase:"Envío IntroPack (Luisa)",       fuente:"Facebook Ads", agente:"José Augusto", entrada:"20 Abr", dias:36,  semaforo:"amarillo"},
-  { nombre:"Selene Jiménez",            fase:"Envío IntroPack (Víctor)",      fuente:"Rockin",       agente:"Adán Cortés",  entrada:"14 Abr", dias:42,  semaforo:"rojo"    },
-  { nombre:"Maria Fernanda Alpizar",    fase:"Envío de Cuestionario",         fuente:"Rockin",       agente:"José Augusto", entrada:"19 May", dias:7,   semaforo:"verde"   },
-  { nombre:"Erika Lugo Gallegos",       fase:"Envío de Cuestionario",         fuente:"Rockin",       agente:"José Augusto", entrada:"19 May", dias:7,   semaforo:"verde"   },
-  { nombre:"Yamir Martínez",            fase:"Envío de Cuestionario",         fuente:"Rockin",       agente:"José Augusto", entrada:"29 Abr", dias:27,  semaforo:"amarillo"},
-  { nombre:"Daniel Martinez",           fase:"Envío de Cuestionario",         fuente:"Rockin",       agente:"José Augusto", entrada:"14 Abr", dias:42,  semaforo:"rojo"    },
-  { nombre:"Addibe Yelice G. Padilla",  fase:"Envío de Cuestionario",         fuente:"Rockin",       agente:"José Augusto", entrada:"13 Abr", dias:43,  semaforo:"rojo"    },
-  { nombre:"Omar Corona",               fase:"Envío de Cuestionario",         fuente:"Rockin",       agente:"Adán Cortés",  entrada:"15 Abr", dias:41,  semaforo:"rojo"    },
-  { nombre:"Magdavelazquez",            fase:"Envío de Cuestionario",         fuente:"Rockin",       agente:"Adán Cortés",  entrada:"14 Abr", dias:42,  semaforo:"rojo"    },
-  { nombre:"Sara Marin",                fase:"Envío de Cuestionario",         fuente:"Rockin",       agente:"Adán Cortés",  entrada:"2 Mar",  dias:85,  semaforo:"rojo"    },
-  { nombre:"Eugenia",                   fase:"Envío de Cuestionario",         fuente:"Rockin",       agente:"Adán Cortés",  entrada:"26 Feb", dias:89,  semaforo:"rojo"    },
-  { nombre:"Karen Fernández",           fase:"Envío de Cuestionario",         fuente:"Rockin",       agente:"Adán Cortés",  entrada:"21 Ene", dias:125, semaforo:"rojo"    },
-  { nombre:"África Alemán Vargas",      fase:"Envío IntroPack (Luisa)",       fuente:"Rockin",       agente:"José Augusto", entrada:"24 Feb", dias:91,  semaforo:"rojo"    },
-];
+  /* MAIN */
+  .page-header { margin-bottom: 36px; }
+  .page-title { font-size: 26px; font-weight: 700; color: var(--text); letter-spacing: -.02em; }
+  .page-sub { font-size: 13px; color: var(--text3); margin-top: 6px; }
 
-// ── HELPERS ────────────────────────────────────────────────────
-const tt = { contentStyle:{ background:"#0f2340", border:`1px solid ${C.navyM}`, color:C.text, borderRadius:8, fontSize:11 }, formatter:(v,n)=>[typeof v==="number"&&n.includes("$")?`$${v.toLocaleString()}`:v, n] };
+  /* KPI STRIP */
+  .kpi-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 36px; }
+  .kpi-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; position: relative; overflow: hidden; }
+  .kpi-card::before { content: ''; position: absolute; inset: 0; opacity: .04; }
+  .kpi-card.green::before { background: var(--green); }
+  .kpi-card.yellow::before { background: var(--yellow); }
+  .kpi-card.blue::before { background: var(--blue); }
+  .kpi-card.purple::before { background: var(--accent); }
+  .kpi-label { font-size: 11px; color: var(--text3); font-weight: 500; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
+  .kpi-value { font-size: 32px; font-weight: 700; line-height: 1; font-family: var(--mono); }
+  .kpi-card.green .kpi-value { color: var(--green); }
+  .kpi-card.yellow .kpi-value { color: var(--yellow); }
+  .kpi-card.blue .kpi-value { color: var(--blue); }
+  .kpi-card.purple .kpi-value { color: var(--accent); }
+  .kpi-sub { font-size: 11px; color: var(--text3); margin-top: 6px; }
 
-const Card = ({ children, mb=16 }) => (
-  <div style={{ background:C.navyL, borderRadius:12, border:`1px solid ${C.navyM}`, padding:"18px 22px", marginBottom:mb }}>
-    {children}
+  /* FUNNEL VISUAL */
+  .funnel-section { margin-bottom: 36px; }
+  .section-title { font-size: 13px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 16px; }
+  .funnel-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .funnel-name { font-size: 12px; color: var(--text2); min-width: 90px; font-weight: 500; }
+  .funnel-bar-outer { flex: 1; background: var(--bg3); border-radius: 6px; height: 32px; overflow: hidden; border: 1px solid var(--border2); }
+  .funnel-bar-inner { height: 100%; border-radius: 5px; display: flex; align-items: center; padding-left: 12px; font-family: var(--mono); font-size: 12px; font-weight: 600; white-space: nowrap; transition: width .5s cubic-bezier(.4,0,.2,1); }
+  .funnel-cr { font-size: 11px; font-family: var(--mono); min-width: 48px; text-align: right; }
+
+  /* MONTHLY TABLE */
+  .table-section { margin-bottom: 36px; }
+  .table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th { background: var(--bg3); padding: 10px 14px; text-align: center; font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text3); border-bottom: 1px solid var(--border); white-space: nowrap; }
+  thead th:first-child { text-align: left; }
+  tbody tr { border-bottom: 1px solid var(--border2); transition: background .1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover td { background: var(--bg3); }
+  tbody tr.real-row td { background: transparent; }
+  tbody tr.proj-row td { background: #7B6EF605; }
+  tbody tr.total-row td { background: var(--bg3); border-top: 1px solid var(--border); font-weight: 600; }
+  td { padding: 10px 14px; text-align: center; font-family: var(--mono); font-size: 12px; }
+  td:first-child { text-align: left; font-family: 'Inter', sans-serif; font-weight: 500; font-size: 12px; }
+  .badge { display: inline-block; font-size: 9px; padding: 1px 5px; border-radius: 3px; margin-left: 5px; font-weight: 600; letter-spacing: .04em; vertical-align: middle; }
+  .badge-real { background: #2ECC8F18; color: var(--green); border: 1px solid var(--green2); }
+  .badge-proy { background: #7B6EF618; color: var(--accent); border: 1px solid var(--accent2); }
+  .highlight { color: var(--accent); font-weight: 700; }
+  .green-val { color: var(--green); }
+  .yellow-val { color: var(--yellow); }
+  .red-val { color: var(--red); }
+  .dim { color: var(--text3); }
+
+  /* CHART */
+  .chart-section { margin-bottom: 36px; }
+  .chart-bars { display: flex; align-items: flex-end; gap: 6px; height: 160px; padding: 0 4px; }
+  .chart-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; }
+  .chart-bar-wrap { flex: 1; width: 100%; display: flex; flex-direction: column; justify-content: flex-end; }
+  .chart-bar { width: 100%; border-radius: 4px 4px 0 0; min-height: 2px; transition: height .5s cubic-bezier(.4,0,.2,1); display: flex; align-items: flex-start; justify-content: center; padding-top: 4px; font-family: var(--mono); font-size: 9px; font-weight: 600; }
+  .chart-label { font-size: 10px; color: var(--text3); font-weight: 500; }
+  .chart-grid { position: relative; }
+
+  /* PAYBACK */
+  .metrics-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 36px; }
+  .metric-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
+  .metric-box-label { font-size: 11px; color: var(--text3); margin-bottom: 6px; }
+  .metric-box-val { font-size: 22px; font-weight: 700; font-family: var(--mono); color: var(--text); }
+  .metric-box-sub { font-size: 10px; color: var(--text3); margin-top: 4px; }
+
+  /* INSIGHT STRIP */
+  .insight-strip { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 36px; }
+  .insight-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .insight-icon { font-size: 16px; margin-bottom: 6px; }
+  .insight-text { font-size: 12px; color: var(--text2); line-height: 1.6; }
+  .insight-text strong { color: var(--text); }
+
+  /* SENSITIVITY */
+  .sensitivity { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 36px; }
+  .sens-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; font-size: 12px; }
+  .sens-label { min-width: 180px; color: var(--text2); }
+  .sens-bar-wrap { flex: 1; background: var(--bg3); border-radius: 4px; height: 20px; overflow: hidden; }
+  .sens-bar { height: 100%; border-radius: 4px; display: flex; align-items: center; padding-left: 8px; font-family: var(--mono); font-size: 10px; font-weight: 600; transition: width .4s; }
+  .sens-val { min-width: 80px; text-align: right; font-family: var(--mono); font-size: 11px; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* RESPONSIVE */
+  @media (max-width: 900px) {
+    .shell { grid-template-columns: 1fr; }
+    .sidebar { position: static; height: auto; }
+    .main { padding: 24px 20px; }
+    .kpi-strip { grid-template-columns: repeat(2,1fr); }
+    .metrics-grid { grid-template-columns: repeat(2,1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <div class="logo">SOMA+</div>
+    <div class="logo-sub">Modelo de Proyecciones 2026</div>
   </div>
-);
-const CardTitle = ({ children, sub }) => (
-  <div style={{ marginBottom:14 }}>
-    <h3 style={{ margin:0, color:C.text, fontSize:13, fontWeight:700 }}>{children}</h3>
-    {sub && <div style={{ color:C.textM, fontSize:11, marginTop:3 }}>{sub}</div>}
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Escenario</div>
+    <div class="scenario-btns">
+      <button class="sc-btn" id="btn-conservador" onclick="setScenario('conservador')">
+        Conservador <span class="sc-tag">384 aplic/mes</span>
+      </button>
+      <button class="sc-btn active" id="btn-base" onclick="setScenario('base')">
+        Base <span class="sc-tag">+5%/mes</span>
+      </button>
+      <button class="sc-btn" id="btn-optimista" onclick="setScenario('optimista')">
+        Optimista <span class="sc-tag">474 aplic/mes</span>
+      </button>
+      <button class="sc-btn" id="btn-custom" onclick="setScenario('custom')">
+        Personalizado <span class="sc-tag">desde CPA</span>
+      </button>
+    </div>
   </div>
-);
-const KPI = ({ label, value, sub, color, alert, accent }) => (
-  <div style={{ background: accent ? `linear-gradient(135deg,${accent}22,${C.navyL})` : C.navyL, border:`1px solid ${alert?C.red:accent?accent+"55":C.navyM}`, borderRadius:12, padding:"14px 18px", display:"flex", flexDirection:"column", gap:3, position:"relative", overflow:"hidden" }}>
-    {alert && <div style={{ position:"absolute",top:0,right:0,background:C.red,color:"#fff",fontSize:8,fontWeight:700,padding:"2px 6px",borderBottomLeftRadius:6,letterSpacing:1 }}>ALERTA</div>}
-    <span style={{ color:C.textM, fontSize:9, fontWeight:600, letterSpacing:1, textTransform:"uppercase" }}>{label}</span>
-    <span style={{ color:color||C.gold, fontSize:24, fontWeight:800, lineHeight:1.1 }}>{value}</span>
-    {sub && <span style={{ color:C.textM, fontSize:10 }}>{sub}</span>}
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Inversión</div>
+    <div class="input-group">
+      <div class="input-label">Inversión mensual sem2 <span id="lbl-inv"></span></div>
+      <div class="input-wrap">
+        <span class="input-prefix">$</span>
+        <input type="number" id="inp-inv" value="100000" min="10000" max="500000" step="5000" oninput="update()">
+        <span class="input-suffix">MXN</span>
+      </div>
+    </div>
+    <div class="input-group">
+      <div class="input-label">Precio membresía/mes <span id="lbl-precio"></span></div>
+      <div class="input-wrap">
+        <span class="input-prefix">$</span>
+        <input type="number" id="inp-precio" value="1500" min="500" max="5000" step="100" oninput="update()">
+        <span class="input-suffix">MXN</span>
+      </div>
+    </div>
   </div>
-);
-const Insight = ({ icon, text, type="warning" }) => {
-  const bg  = type==="critical"?"#f43f5e18":type==="ok"?"#10b98118":"#f0a50018";
-  const bdr = type==="critical"?C.red:type==="ok"?C.green:C.gold;
-  return (
-    <div style={{ background:bg, border:`1px solid ${bdr}`, borderRadius:8, padding:"9px 13px", display:"flex", gap:9, fontSize:12, color:C.text, lineHeight:1.5 }}>
-      <span style={{ fontSize:14, flexShrink:0 }}>{icon}</span><span>{text}</span>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Tasas de conversión</div>
+    <div class="input-group">
+      <div class="input-label">CR Aprobación <span id="lbl-cr-apro"></span></div>
+      <input type="range" id="inp-cr-apro" min="30" max="95" value="69" step="1" oninput="update()">
     </div>
-  );
+    <div class="input-group">
+      <div class="input-label">CR Trial (apro→trial) <span id="lbl-cr-trial"></span></div>
+      <input type="range" id="inp-cr-trial" min="10" max="90" value="41" step="1" oninput="update()">
+    </div>
+    <div class="input-group">
+      <div class="input-label">CR Conversión (trial→member) <span id="lbl-cr-conv"></span></div>
+      <input type="range" id="inp-cr-conv" min="50" max="99" value="95" step="1" oninput="update()">
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Costo por aplicación</div>
+    <div class="input-group">
+      <div class="input-label">Costo por aplicación <span id="lbl-cpa"></span></div>
+      <div class="input-wrap">
+        <span class="input-prefix">$</span>
+        <input type="number" id="inp-cpa" value="298" min="50" max="2000" step="10" oninput="update()">
+        <span class="input-suffix">MXN</span>
+      </div>
+    </div>
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;margin-top:4px">
+      <div style="font-size:10px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Aplicantes/mes calculados</div>
+      <div style="font-family:var(--mono);font-size:16px;font-weight:600;color:var(--accent)" id="lbl-aplic-derivado">—</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:2px">= Inversión / Costo por aplic.</div>
+    </div>
+  </div>
+
+  <button class="reset-btn" onclick="resetDefaults()">↺ Restaurar valores por defecto</button>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="page-header">
+    <div class="page-title">Proyecciones cierre 2026</div>
+    <div class="page-sub" id="scenario-desc">Base real Ene–Jun · Proyección Jul–Dic con tendencia Mar–May · Inversión $1.2M MXN</div>
+  </div>
+
+  <!-- KPI STRIP -->
+  <div class="kpi-strip">
+    <div class="kpi-card green">
+      <div class="kpi-label">Customers al cierre</div>
+      <div class="kpi-value" id="kpi-cust">—</div>
+      <div class="kpi-sub" id="kpi-cust-sub">—</div>
+    </div>
+    <div class="kpi-card yellow">
+      <div class="kpi-label">CAC proyectado</div>
+      <div class="kpi-value" id="kpi-cac">—</div>
+      <div class="kpi-sub" id="kpi-cac-sub">—</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-label">MRR al cierre</div>
+      <div class="kpi-value" id="kpi-mrr">—</div>
+      <div class="kpi-sub" id="kpi-mrr-sub">—</div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="kpi-label">Payback period</div>
+      <div class="kpi-value" id="kpi-payback">—</div>
+      <div class="kpi-sub">meses para recuperar CAC</div>
+    </div>
+  </div>
+
+  <!-- FUNNEL -->
+  <div class="funnel-section">
+    <div class="section-title">Embudo mensual proyectado (sem2 promedio)</div>
+    <div id="funnel-rows"></div>
+  </div>
+
+  <!-- CHART -->
+  <div class="chart-section">
+    <div class="section-title">Customers nuevos por mes</div>
+    <div class="chart-bars" id="chart-bars"></div>
+    <div style="display:flex;gap:16px;margin-top:8px;font-size:11px;color:var(--text3)">
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;background:#5B9CF6;border-radius:2px;display:inline-block"></span>Datos reales</span>
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;background:var(--accent);border-radius:2px;display:inline-block"></span>Proyección</span>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-section">
+    <div class="section-title">Tabla mensual detallada</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Mes</th>
+            <th>Inversión</th>
+            <th>Aplicantes</th>
+            <th>Aprobados</th>
+            <th>CR Apro</th>
+            <th>Trials</th>
+            <th>CR Trial</th>
+            <th>Customers</th>
+            <th>CAC</th>
+            <th>MRR nuevo</th>
+          </tr>
+        </thead>
+        <tbody id="main-table"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- METRICS -->
+  <div class="metrics-grid">
+    <div class="metric-box">
+      <div class="metric-box-label">Inversión total año</div>
+      <div class="metric-box-val" id="met-inv">—</div>
+      <div class="metric-box-sub">Sem1 real + Sem2 presupuesto</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-box-label">ROI (MRR / Inversión)</div>
+      <div class="metric-box-val" id="met-roi">—</div>
+      <div class="metric-box-sub">MRR anual acumulado vs. inversión total</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-box-label">LTV estimado (12 meses)</div>
+      <div class="metric-box-val" id="met-ltv">—</div>
+      <div class="metric-box-sub">Precio/mes × 12 meses por customer</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-box-label">Trials proyectados año</div>
+      <div class="metric-box-val" id="met-trials">—</div>
+      <div class="metric-box-sub">Incluye backlog may+jun (+98)</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-box-label">Aplicantes proyectados año</div>
+      <div class="metric-box-val" id="met-aplic">—</div>
+      <div class="metric-box-sub">Acumulado 12 meses</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-box-label">LTV / CAC ratio</div>
+      <div class="metric-box-val" id="met-ltvcac">—</div>
+      <div class="metric-box-sub">Objetivo saludable: &gt; 3x</div>
+    </div>
+  </div>
+
+  <!-- SENSITIVITY -->
+  <div class="sensitivity">
+    <div class="section-title" style="margin-bottom:16px">Análisis de sensibilidad — impacto en customers al cierre</div>
+    <div id="sensitivity-rows"></div>
+    <p style="font-size:11px;color:var(--text3);margin-top:12px">* Cada barra muestra cuántos customers adicionales generaría mejorar esa métrica un 10%, manteniendo el resto igual.</p>
+  </div>
+
+  <!-- INSIGHTS -->
+  <div class="insight-strip" id="insight-strip"></div>
+
+  <p style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.7">
+    Modelo basado en tasas reales Mar–May 2026. Backlog de +98 customers (trials pendientes may+jun) incluido en julio.
+    CAC y MRR calculados sobre inversión sem2 definida. Actualiza los sliders para explorar escenarios.
+  </p>
+
+</main>
+</div>
+
+<script>
+// ─── DATOS REALES ──────────────────────────────────────────────
+const REAL = [
+  {m:1,mes:'Ene',aplic:160, apro:36,  trial:2,   cust:1,   inv:20429.68},
+  {m:2,mes:'Feb',aplic:202, apro:96,  trial:23,  cust:10,  inv:101906.75},
+  {m:3,mes:'Mar',aplic:342, apro:253, trial:60,  cust:21,  inv:117863.35},
+  {m:4,mes:'Abr',aplic:335, apro:248, trial:99,  cust:85,  inv:113139.46},
+  {m:5,mes:'May',aplic:474, apro:291, trial:165, cust:133, inv:109595.62},
+  {m:6,mes:'Jun',aplic:137, apro:109, trial:29,  cust:69,  inv:100000},
+];
+const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const BACKLOG = 98;
+const INV_SEM1 = REAL.reduce((a,r)=>a+r.inv,0);
+
+// ─── ESCENARIOS ────────────────────────────────────────────────
+const SCENARIOS = {
+  conservador: { label:'Conservador', desc:'Promedio mensual Mar–May sostenido', aplic: (inv,cpa)=>Array(6).fill(384) },
+  base:        { label:'Base',        desc:'Crecimiento +5%/mes desde mayo',     aplic: (inv,cpa)=>Array.from({length:6},(_,i)=>Math.round(474*Math.pow(1.05,i))) },
+  optimista:   { label:'Optimista',   desc:'Mayo como benchmark sostenido',       aplic: (inv,cpa)=>Array(6).fill(474) },
+  custom:      { label:'Personalizado',desc:'Calculado desde costo por aplicación', aplic: (inv,cpa)=>Array(6).fill(Math.max(10,Math.round(inv/cpa))) },
 };
 
-const Semaforo = ({ color }) => {
-  const bg = color==="verde"?C.green:color==="amarillo"?C.gold:C.red;
-  const label = color==="verde"?"Urgente":color==="amarillo"?"Seguimiento":"Frío";
-  return (
-    <div style={{ display:"flex", alignItems:"center", gap:5 }}>
-      <div style={{ width:8, height:8, borderRadius:"50%", background:bg, boxShadow:`0 0 6px ${bg}` }} />
-      <span style={{ fontSize:10, color:bg, fontWeight:700 }}>{label}</span>
-    </div>
-  );
-};
+let currentScenario = 'base';
 
-const TABS = ["📊 Resumen Paid","📈 Evolución Mensual","📆 Evolución Semanal","🎯 Seguimiento Final","📡 Campañas UTM","📅 OPS 6 Semanas","💰 Costos por Etapa"];
-
-const totalPaid = monthlyPaid.reduce((a,m)=>a+m.total,0);
-const totalInv  = monthlyPaid.reduce((a,m)=>a+m.inv,0);
-const totalMini = monthlyPaid.reduce((a,m)=>a+m.mini,0);
-const totalCod  = monthlyPaid.reduce((a,m)=>a+m.cod,0);
-const totalDx   = monthlyPaid.reduce((a,m)=>a+m.dx,0);
-const totalAce  = monthlyPaid.reduce((a,m)=>a+m.ace,0);
-const totalRec  = monthlyPaid.reduce((a,m)=>a+m.rec,0);
-const totalNC   = monthlyPaid.reduce((a,m)=>a+m.noContact,0);
-
-// Funnel evolutivo
-const funnelData = [
-  { name:"Leads Pagados Entrantes", value:totalPaid, pct:"100%",  color:C.teal   },
-  { name:"Nunca contactados",       value:totalNC,   pct:`${(totalNC/totalPaid*100).toFixed(1)}%`, color:C.red    },
-  { name:"Llegaron a Mini-COD",     value:totalMini, pct:`${(totalMini/totalPaid*100).toFixed(1)}%`, color:C.gold   },
-  { name:"Llegaron a COD",          value:totalCod,  pct:`${(totalCod/totalPaid*100).toFixed(1)}%`, color:C.goldL  },
-  { name:"Llegaron a Diagnóstico",  value:totalDx,   pct:`${(totalDx/totalPaid*100).toFixed(1)}%`, color:C.orange },
-  { name:"Programa Aceptado",       value:totalAce,  pct:`${(totalAce/totalPaid*100).toFixed(1)}%`, color:C.green  },
-];
-
-const FunnelBar = ({ data, prev }) => {
-  const w = Math.max((data.value/totalPaid)*100, 3);
-  const drop = prev ? (((prev-data.value)/prev)*100).toFixed(0) : null;
-  return (
-    <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:9 }}>
-      <div style={{ width:190, textAlign:"right", flexShrink:0 }}>
-        <div style={{ color:C.text, fontSize:12, fontWeight:600 }}>{data.name}</div>
-        <div style={{ color:C.textM, fontSize:10 }}>{data.pct} del total</div>
-      </div>
-      <div style={{ flex:1, position:"relative" }}>
-        <div style={{ height:34, width:`${w}%`, background:`linear-gradient(90deg,${data.color}88,${data.color})`, borderRadius:6, display:"flex", alignItems:"center", paddingLeft:10 }}>
-          <span style={{ color:"#fff", fontWeight:800, fontSize:14 }}>{data.value}</span>
-        </div>
-        {drop && <span style={{ position:"absolute", right:0, top:"50%", transform:"translateY(-50%)", color:C.red, fontSize:10, fontWeight:700 }}>▼{drop}%</span>}
-      </div>
-    </div>
-  );
-};
-
-
-const opsWeeklyAct = [
-  { sem:"May 4",  leads:31, mini:11, cod:7,  sf:1, ace:1, rec:2, actMini:11, actCod:7,  cpMini:493,  cpCod:774  },
-  { sem:"May 11", leads:15, mini:5,  cod:4,  sf:1, ace:0, rec:0, actMini:4,  actCod:8,  cpMini:1354, cpCod:677  },
-  { sem:"May 18", leads:19, mini:6,  cod:5,  sf:2, ace:1, rec:1, actMini:6,  actCod:7,  cpMini:903,  cpCod:774  },
-  { sem:"May 25", leads:31, mini:9,  cod:8,  sf:0, ace:1, rec:4, actMini:6,  actCod:8,  cpMini:903,  cpCod:677  },
-  { sem:"Jun 1",  leads:17, mini:9,  cod:7,  sf:1, ace:0, rec:3, actMini:7,  actCod:11, cpMini:1548, cpCod:985  },
-  { sem:"Jun 8",  leads:9,  mini:1,  cod:0,  sf:0, ace:0, rec:1, actMini:0,  actCod:3,  cpMini:0,    cpCod:3612 },
-];
-
-const opsWeeklyCoh = [
-  { sem:"May 4",  n:31, mini:23, cod:13, dx:10, sf:1, ace:1, rec:2 },
-  { sem:"May 11", n:15, mini:33, cod:27, dx:13, sf:1, ace:0, rec:0 },
-  { sem:"May 18", n:19, mini:32, cod:26, dx:16, sf:2, ace:1, rec:1 },
-  { sem:"May 25", n:31, mini:29, cod:26, dx:3,  sf:0, ace:1, rec:4 },
-  { sem:"Jun 1",  n:17, mini:53, cod:41, dx:18, sf:1, ace:0, rec:3 },
-  { sem:"Jun 8",  n:9,  mini:11, cod:0,  dx:0,  sf:0, ace:0, rec:1 },
-];
-
-const opsSFLeads = [
-  { nombre:"Maria Fernanda Alpizar", fuente:"Rockin",       agente:"José Augusto", entrada:"19 May", codL:"25 May", codV:"28 May", dias:14,  urgencia:"alta"  },
-  { nombre:"Armando Padilla",        fuente:"Rel. públicas",agente:"José Augusto", entrada:"6 May",  codL:"19 May", codV:"—",      dias:27,  urgencia:"alta"  },
-  { nombre:"Gustavo Jimenez Vera",   fuente:"Referido",     agente:"Adán",         entrada:"15 Abr", codL:"—",      codV:"16 Abr", dias:47,  urgencia:"media" },
-  { nombre:"Mayra Huitrón Morales",  fuente:"Rockin",       agente:"José Augusto", entrada:"3 Abr",  codL:"13 Abr", codV:"16 Abr", dias:60,  urgencia:"media" },
-  { nombre:"Martha Garza",           fuente:"Rockin",       agente:"José Augusto", entrada:"25 Mar", codL:"20 Abr", codV:"27 Abr", dias:69,  urgencia:"baja"  },
-  { nombre:"Jerónimo Dorbecker",     fuente:"Avalanche",    agente:"José Augusto", entrada:"6 Mar",  codL:"—",      codV:"8 Abr",  dias:88,  urgencia:"baja"  },
-  { nombre:"Jorge Jimenez",          fuente:"Avalanche",    agente:"José Augusto", entrada:"25 Feb", codL:"—",      codV:"1 Abr",  dias:97,  urgencia:"baja"  },
-  { nombre:"Guillermo Acosta",       fuente:"Referido",     agente:"José Augusto", entrada:"3 Feb",  codL:"6 Feb",  codV:"10 Feb", dias:119, urgencia:"baja"  },
-  { nombre:"Alan Ramirez Flores",    fuente:"Avalanche",    agente:"José Augusto", entrada:"6 Ene",  codL:"3 Mar",  codV:"—",      dias:147, urgencia:"baja"  },
-];
-
-const opsRecLeads = [
-  { nombre:"Octavio Balleza",   fuente:"Rockin",       agente:"José A.", sem:"May 25", nota:"No tiene empresa ni presupuesto. Preguntó por hora de coaching." },
-  { nombre:"Jesús Arturo",      fuente:"Rockin",       agente:"José A.", sem:"May 25", nota:"—" },
-  { nombre:"Julián Flores",     fuente:"Rockin",       agente:"José A.", sem:"May 25", nota:"—" },
-  { nombre:"Miguel Ángel",      fuente:"Rockin",       agente:"José A.", sem:"May 25", nota:"—" },
-  { nombre:"Virginia",          fuente:"Rockin",       agente:"José A.", sem:"May 18", nota:"Jubilada. Le llamó la atención el mensaje pero no busca nada concreto." },
-  { nombre:"Hector",            fuente:"Rockin",       agente:"José A.", sem:"May 4",  nota:"Ghost — no contestó mensajes ni llamadas." },
-  { nombre:"William",           fuente:"Rockin",       agente:"José A.", sem:"May 4",  nota:"Sin presupuesto para Money Club." },
-  { nombre:"Vianey quiro",      fuente:"Rockin",       agente:"José A.", sem:"Jun 1",  nota:"Sin recursos para los programas actualmente." },
-  { nombre:"Ana García",        fuente:"Rockin",       agente:"José A.", sem:"Jun 1",  nota:"—" },
-  { nombre:"Roberto Muñoz",     fuente:"Rockin",       agente:"José A.", sem:"Jun 1",  nota:"—" },
-  { nombre:"Patricia Reyes",    fuente:"Rockin",       agente:"José A.", sem:"Jun 8",  nota:"—" },
-];
-
-export default function Dashboard() {
-  const [tab, setTab] = useState(0);
-  const [mView, setMView] = useState("pipeline");
-  const [wView, setWView] = useState("pipeline");
-  const [wTable, setWTable] = useState("cohorte");
-  const [campView, setCampView] = useState("resumen");
-  const [opsTab, setOpsTab] = useState("ops-act");
-  const [sfFilter, setSfFilter] = useState("todos");
-
-  const filteredLeads = sfFilter==="todos" ? leadsAvanzados
-    : leadsAvanzados.filter(l=>l.semaforo===sfFilter);
-
-  return (
-    <div style={{ background:C.navy, minHeight:"100vh", fontFamily:"'DM Sans','Segoe UI',sans-serif", color:C.text }}>
-
-      {/* HEADER */}
-      <div style={{ background:"linear-gradient(135deg,#060f1e,#0d1b2e 50%,#111f35)", borderBottom:`2px solid ${C.gold}`, padding:"16px 24px" }}>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
-          <div>
-            <div style={{ color:C.gold, fontSize:9, fontWeight:700, letterSpacing:2, textTransform:"uppercase", marginBottom:2 }}>ActionCoach · Pipeline Fuentes Pagadas</div>
-            <h1 style={{ margin:0, fontSize:20, fontWeight:800, color:"#fff" }}>Altamirano <span style={{ color:C.gold }}>&</span> Anaya · Rockin + Facebook Ads</h1>
-            <div style={{ color:C.textM, fontSize:10, marginTop:3 }}>388 leads pagados · Ene–26 May 2026 · $119,970 MXN inversión</div>
-          </div>
-          <div style={{ display:"flex", gap:14 }}>
-            {[
-              { l:"Leads pagados",   v:"388",    c:C.teal  },
-              { l:"Inversión total", v:"$119,970",c:C.gold  },
-              { l:"CPL promedio",    v:"$309",   c:C.goldL },
-              { l:"Cierres",         v:"1",      c:C.green },
-            ].map((k,i)=>(
-              <div key={i} style={{ textAlign:"right" }}>
-                <div style={{ fontSize:9, color:C.textM, textTransform:"uppercase", letterSpacing:1 }}>{k.l}</div>
-                <div style={{ fontSize:16, fontWeight:800, color:k.c }}>{k.v}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* TABS */}
-      <div style={{ display:"flex", borderBottom:`1px solid ${C.navyM}`, padding:"0 24px", background:C.navyL, overflowX:"auto" }}>
-        {TABS.map((t,i)=>(
-          <button key={i} onClick={()=>setTab(i)} style={{ background:"none", border:"none", cursor:"pointer", padding:"11px 14px", whiteSpace:"nowrap", color:tab===i?C.gold:C.textM, fontWeight:tab===i?700:500, fontSize:11, borderBottom:tab===i?`2px solid ${C.gold}`:"2px solid transparent", transition:"all 0.2s" }}>{t}</button>
-        ))}
-      </div>
-
-      <div style={{ padding:"20px 22px", maxWidth:1080, margin:"0 auto" }}>
-
-        {/* ══ RESUMEN ════════════════════════════════════════════════ */}
-        {tab===0 && (
-          <div>
-            <h2 style={{ margin:"0 0 6px", fontSize:17, fontWeight:700 }}>Resumen General — Leads Pagados (Rockin + Facebook Ads)</h2>
-            <p style={{ color:C.textM, fontSize:11, margin:"0 0 16px" }}>Solo se consideran leads con fuente Rockin o Facebook Ads. Referidos, orgánico y otras fuentes excluidos.</p>
-
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:10, marginBottom:16 }}>
-              <KPI label="Leads entrantes" value="408"  sub="Rockin: 408 · FB Ads: 14" color={C.teal} />
-              <KPI label="Nunca contactados" value={`${totalNC}`} sub={`${(totalNC/totalPaid*100).toFixed(0)}% sin primer contacto`} color={C.red} alert />
-              <KPI label="Llegaron a Mini-COD" value={`${totalMini}`} sub={`${(totalMini/totalPaid*100).toFixed(0)}% del total`} color={C.gold} />
-              <KPI label="Llegaron a COD" value={`${totalCod}`} sub={`${(totalCod/totalPaid*100).toFixed(0)}% del total`} color={C.purple} />
-              <KPI label="Programa Aceptado" value="2" sub="0.5% conv. paid (8 total con otras fuentes)" color={C.green} />
-            </div>
-
-            <Card>
-              <CardTitle>Embudo evolutivo — leads pagados</CardTitle>
-              {funnelData.map((d,i)=><FunnelBar key={i} data={d} prev={i>0?funnelData[i-1].value:null} />)}
-              <div style={{ marginTop:12, padding:"10px 14px", background:C.navyM+"55", borderRadius:8, fontSize:11, color:C.textM }}>
-                La tasa de conversión sobre leads <b style={{color:C.gold}}>efectivamente contactados</b> (388−{totalNC}={388-totalNC}) es 1/{388-totalNC} = <b style={{color:C.gold}}>{(1/(388-totalNC)*100).toFixed(1)}%</b>. El denominador correcto para evaluar al equipo comercial no es 388, sino los {388-totalNC} que sí recibieron contacto.
-              </div>
-            </Card>
-
-            {/* Stage breakdown visual */}
-            <Card>
-              <CardTitle>Estado actual de los 388 leads pagados por etapa</CardTitle>
-              {[
-                { fase:"No contactados (Identif. sospechoso)", n:266, color:C.red    },
-                { fase:"En llamada Mini-COD",                  n:43,  color:C.gold   },
-                { fase:"Programa rechazado",                   n:29,  color:C.muted  },
-                { fase:"Llamada COD con Luisa",                n:23,  color:C.goldL  },
-                { fase:"Envío de Cuestionario",                n:10,  color:C.teal   },
-                { fase:"Seguimiento final",                    n:3,   color:C.green  },
-                { fase:"Envío IntroPack (Luisa/Victor)",       n:4,   color:C.purple },
-                { fase:"En pausa / Otras",                     n:5,   color:C.muted  },
-                { fase:"Completar diagnóstico",                n:1,   color:C.orange },
-                { fase:"Llamada antes de cita Dx",             n:1,   color:C.orange },
-                { fase:"Programa aceptado",                    n:1,   color:C.green  },
-              ].map((s,i)=>(
-                <div key={i} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:5 }}>
-                  <div style={{ width:215, color:s.n>=3?C.text:C.textM, fontSize:11 }}>{s.fase}</div>
-                  <div style={{ flex:1, background:C.navyM, borderRadius:4, height:15 }}>
-                    <div style={{ width:`${(s.n/388)*100}%`, minWidth:s.n>0?"18px":"0", background:s.color, height:"100%", borderRadius:4, display:"flex", alignItems:"center", paddingLeft:6 }}>
-                      <span style={{ color:"#fff", fontSize:9, fontWeight:700 }}>{s.n}</span>
-                    </div>
-                  </div>
-                  <div style={{ width:32, textAlign:"right", color:C.textM, fontSize:10 }}>{((s.n/388)*100).toFixed(0)}%</div>
-                </div>
-              ))}
-            </Card>
-
-            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-              <Insight type="critical" icon="📵" text={`${totalNC} de 388 leads pagados nunca fueron contactados. Eso es $${(totalNC*309).toLocaleString()} MXN de inversión que no generó ni una conversación.`} />
-              <Insight type="warning"  icon="🎯" text="Hay 19 leads activos en etapas avanzadas (post-COD) que no están en Seguimiento Final. Son oportunidades vivas que necesitan acción esta semana. Ver pestaña Seguimiento Final." />
-              <Insight type="ok"       icon="💡" text={`La tasa de conversión sobre contactados es ${(1/(388-totalNC)*100).toFixed(1)}%. Si se mejora el contacto inicial del 31% actual al 50%, se generarían ~2-3 cierres adicionales con la misma inversión.`} />
-            </div>
-          </div>
-        )}
-
-        {/* ══ EVOLUCIÓN MENSUAL ══════════════════════════════════════ */}
-        {tab===1 && (
-          <div>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
-              <div>
-                <h2 style={{ margin:"0 0 3px", fontSize:17, fontWeight:700 }}>Evolución Mensual — Pipeline Evolutivo</h2>
-                <p style={{ color:C.textM, fontSize:11, margin:0 }}>Cohorte: de los leads que entraron ese mes, cuántos llegaron alguna vez a cada etapa</p>
-              </div>
-              <div style={{ display:"flex", background:C.navyM, borderRadius:8, overflow:"hidden" }}>
-                {[["pipeline","📊 Pipeline"],["costos","💰 Costos"]].map(([k,l])=>(
-                  <button key={k} onClick={()=>setMView(k)} style={{ background:mView===k?C.gold:"none", color:mView===k?C.navy:C.textM, border:"none", cursor:"pointer", padding:"6px 13px", fontSize:10, fontWeight:700, transition:"all 0.2s" }}>{l}</button>
-                ))}
-              </div>
-            </div>
-
-            {mView==="pipeline" ? (
-              <>
-                <Card>
-                  <CardTitle sub="Barras: evolución acumulada por cohorte mensual">Leads pagados por mes y progresión evolutiva en el embudo</CardTitle>
-                  <ResponsiveContainer width="100%" height={240}>
-                    <BarChart data={monthlyPaid} barGap={3}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={C.navyM} />
-                      <XAxis dataKey="mes" tick={{ fill:C.textM, fontSize:11 }} />
-                      <YAxis tick={{ fill:C.textM, fontSize:11 }} />
-                      <Tooltip {...tt} />
-                      <Legend wrapperStyle={{ color:C.textM, fontSize:10 }} />
-                      <Bar dataKey="total"     name="Leads entrantes"     fill={C.teal}   opacity={0.35} radius={[3,3,0,0]} />
-                      <Bar dataKey="noContact" name="No contactados"      fill={C.red}    opacity={0.7}  radius={[3,3,0,0]} />
-                      <Bar dataKey="mini"      name="Mini-COD (evolutivo)" fill={C.gold}  radius={[3,3,0,0]} />
-                      <Bar dataKey="cod"       name="COD (evolutivo)"     fill={C.purple} radius={[3,3,0,0]} />
-                      <Bar dataKey="dx"        name="Diagnóstico"         fill={C.orange} radius={[3,3,0,0]} />
-                      <Bar dataKey="rec"       name="Rechazados"          fill={C.muted}  opacity={0.6}  radius={[3,3,0,0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </Card>
-
-                <Card>
-                  <CardTitle sub="Sobre el total de leads que entraron ese mes">Tasa de contacto y activación mensual (%)</CardTitle>
-                  <ResponsiveContainer width="100%" height={200}>
-                    <LineChart data={monthlyPaid.map(m=>({
-                      ...m,
-                      rContact: +((1-m.noContact/m.total)*100).toFixed(1),
-                      rMini:    +(m.mini/m.total*100).toFixed(1),
-                      rCod:     +(m.cod/m.total*100).toFixed(1),
-                      rDx:      +(m.dx/m.total*100).toFixed(1),
-                    }))}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={C.navyM} />
-                      <XAxis dataKey="mes" tick={{ fill:C.textM, fontSize:11 }} />
-                      <YAxis tick={{ fill:C.textM, fontSize:11 }} tickFormatter={v=>`${v}%`} />
-                      <Tooltip {...tt} formatter={v=>`${v}%`} />
-                      <Legend wrapperStyle={{ color:C.textM, fontSize:10 }} />
-                      <Line dataKey="rContact" name="% Contactados"  stroke={C.teal}   strokeWidth={2.5} dot={{ r:5 }} />
-                      <Line dataKey="rMini"    name="% Mini-COD"     stroke={C.gold}   strokeWidth={2.5} dot={{ r:5 }} />
-                      <Line dataKey="rCod"     name="% COD"          stroke={C.purple} strokeWidth={2} dot={{ r:4 }} strokeDasharray="5 3" />
-                      <Line dataKey="rDx"      name="% Diagnóstico"  stroke={C.orange} strokeWidth={2} dot={{ r:4 }} strokeDasharray="3 3" />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </Card>
-
-                {/* Monthly table */}
-                <Card>
-                  <CardTitle>Tabla mensual completa</CardTitle>
-                  <table style={{ width:"100%", borderCollapse:"collapse", fontSize:11 }}>
-                    <thead>
-                      <tr style={{ borderBottom:`1px solid ${C.navyM}` }}>
-                        {["Mes","Inversión","Leads","No contactados","Mini-COD","COD","Dx","Aceptado","Rechazado"].map(h=>(
-                          <th key={h} style={{ padding:"7px 9px", color:C.textM, fontWeight:600, textAlign:h==="Mes"?"left":"right", fontSize:10 }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {monthlyPaid.map((r,i)=>(
-                        <tr key={i} style={{ borderBottom:`1px solid ${C.navyM}22`, background:r.mes==="Mar"?"#f43f5e06":"none" }}>
-                          <td style={{ padding:"9px", color:C.text, fontWeight:700 }}>{r.label}{r.mes==="Mar"&&<span style={{ fontSize:8,color:C.red,marginLeft:4 }}>⚠</span>}</td>
-                          <td style={{ padding:"9px", textAlign:"right", color:C.textM }}>${r.inv.toLocaleString()}</td>
-                          <td style={{ padding:"9px", textAlign:"right", color:C.teal,   fontWeight:700 }}>{r.total}</td>
-                          <td style={{ padding:"9px", textAlign:"right", color:r.noContact/r.total>0.6?C.red:C.gold }}>{r.noContact} ({(r.noContact/r.total*100).toFixed(0)}%)</td>
-                          <td style={{ padding:"9px", textAlign:"right", color:C.gold   }}>{r.mini} ({(r.mini/r.total*100).toFixed(0)}%)</td>
-                          <td style={{ padding:"9px", textAlign:"right", color:C.purple }}>{r.cod} ({(r.cod/r.total*100).toFixed(0)}%)</td>
-                          <td style={{ padding:"9px", textAlign:"right", color:C.orange }}>{r.dx}</td>
-                          <td style={{ padding:"9px", textAlign:"right", color:r.ace>0?C.green:C.textM, fontWeight:r.ace>0?700:400 }}>{r.ace}</td>
-                          <td style={{ padding:"9px", textAlign:"right", color:r.rec>0?C.red:C.textM }}>{r.rec}</td>
-                        </tr>
-                      ))}
-                      <tr style={{ borderTop:`2px solid ${C.navyM}`, background:C.navyM+"44" }}>
-                        <td style={{ padding:"8px 9px", color:C.gold, fontWeight:700 }}>TOTAL</td>
-                        <td style={{ padding:"8px", textAlign:"right", color:C.gold, fontWeight:700 }}>$119,970</td>
-                        <td style={{ padding:"8px", textAlign:"right", color:C.teal,   fontWeight:700 }}>{totalPaid}</td>
-                        <td style={{ padding:"8px", textAlign:"right", color:C.red,    fontWeight:700 }}>{totalNC} ({(totalNC/totalPaid*100).toFixed(0)}%)</td>
-                        <td style={{ padding:"8px", textAlign:"right", color:C.gold,   fontWeight:700 }}>{totalMini} ({(totalMini/totalPaid*100).toFixed(0)}%)</td>
-                        <td style={{ padding:"8px", textAlign:"right", color:C.purple, fontWeight:700 }}>{totalCod} ({(totalCod/totalPaid*100).toFixed(0)}%)</td>
-                        <td style={{ padding:"8px", textAlign:"right", color:C.orange, fontWeight:700 }}>{totalDx}</td>
-                        <td style={{ padding:"8px", textAlign:"right", color:C.green,  fontWeight:700 }}>{totalAce}</td>
-                        <td style={{ padding:"8px", textAlign:"right", color:C.red,    fontWeight:700 }}>{totalRec}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </Card>
-              </>
-            ) : (
-              <>
-                <Card>
-                  <CardTitle>Costo por etapa mensual — solo leads pagados</CardTitle>
-                  <ResponsiveContainer width="100%" height={220}>
-                    <LineChart data={monthlyPaid}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={C.navyM} />
-                      <XAxis dataKey="mes" tick={{ fill:C.textM, fontSize:11 }} />
-                      <YAxis tick={{ fill:C.textM, fontSize:11 }} tickFormatter={v=>`$${(v/1000).toFixed(0)}K`} />
-                      <Tooltip {...tt} formatter={v=>`$${v.toLocaleString()}`} />
-                      <Legend wrapperStyle={{ color:C.textM, fontSize:10 }} />
-                      <ReferenceLine y={monthlyPaid.reduce((a,m)=>a+m.cpl,0)/5} stroke={C.teal} strokeDasharray="4 3" opacity={0.4} />
-                      <Line dataKey="cpl"    name="CPL (lead pagado)" stroke={C.teal}   strokeWidth={2.5} dot={{ r:5 }} />
-                      <Line dataKey="cpMini" name="Costo Mini-COD"    stroke={C.gold}   strokeWidth={2.5} dot={{ r:5 }} />
-                      <Line dataKey="cpCod"  name="Costo COD"         stroke={C.purple} strokeWidth={2}   dot={{ r:4 }} strokeDasharray="5 3" />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </Card>
-                <Card>
-                  <CardTitle>Tabla de costos mensual</CardTitle>
-                  <table style={{ width:"100%", borderCollapse:"collapse", fontSize:11 }}>
-                    <thead>
-                      <tr style={{ borderBottom:`1px solid ${C.navyM}` }}>
-                        {["Mes","Inversión","Leads pagados","CPL","Costo Mini-COD","Costo COD","Costo Dx"].map(h=>(
-                          <th key={h} style={{ padding:"7px 9px", color:C.textM, fontWeight:600, textAlign:h==="Mes"?"left":"right", fontSize:10 }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {monthlyPaid.map((r,i)=>(
-                        <tr key={i} style={{ borderBottom:`1px solid ${C.navyM}22`, background:r.mes==="Mar"?"#f43f5e06":"none" }}>
-                          <td style={{ padding:"8px 9px", color:C.text, fontWeight:700 }}>{r.label}</td>
-                          <td style={{ padding:"8px", textAlign:"right", color:C.textM }}>${r.inv.toLocaleString()}</td>
-                          <td style={{ padding:"8px", textAlign:"right", color:C.teal }}>{r.total}</td>
-                          <td style={{ padding:"8px", textAlign:"right", color:r.cpl>500?C.red:r.cpl>350?C.gold:C.green, fontWeight:700 }}>${r.cpl.toLocaleString()}</td>
-                          <td style={{ padding:"8px", textAlign:"right", color:r.cpMini>1200?C.red:C.gold }}>${r.cpMini.toLocaleString()}</td>
-                          <td style={{ padding:"8px", textAlign:"right", color:r.cpCod>3000?C.red:C.purple }}>${r.cpCod.toLocaleString()}</td>
-                          <td style={{ padding:"8px", textAlign:"right", color:C.orange }}>{r.dx>0?`$${(r.inv/r.dx).toLocaleString()}`:"—"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </Card>
-              </>
-            )}
-
-            <div style={{ display:"flex", flexDirection:"column", gap:8, marginTop:4 }}>
-              <Insight type="critical" icon="🚨" text="Marzo: solo 34 leads pagados con $24,402 de inversión → CPL de $718 (vs $204 en enero). Mes con mayor costo y menor volumen. Los UTMs aún no estaban activos, sin datos de campaña para diagnosticar." />
-              <Insight type="warning"  icon="📉" text="Mayo registra la tasa de contacto más baja (23%): 53 de 69 leads no fueron contactados. Coincide con que Adán dejó el equipo el 4 de mayo y José trabaja solo desde entonces." />
-              <Insight type="ok"       icon="✅" text="Marzo tuvo el único cierre del período (cohorte Mar 9). También fue el mes con mejor tasa de COD (35%). Pocos leads pero muy bien trabajados — el mejor ratio de calidad." />
-            </div>
-          </div>
-        )}
-
-        {/* ══ EVOLUCIÓN SEMANAL ══════════════════════════════════════ */}
-        {tab===2 && (
-          <div>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
-              <div>
-                <h2 style={{ margin:"0 0 3px", fontSize:17, fontWeight:700 }}>Evolución Semanal — 22 Semanas (Ene–May)</h2>
-                <p style={{ color:C.textM, fontSize:11, margin:0 }}>Pipeline evolutivo por cohorte semanal · solo fuentes Rockin y Facebook Ads</p>
-              </div>
-              <div style={{ display:"flex", background:C.navyM, borderRadius:8, overflow:"hidden" }}>
-                {[["pipeline","📊 Pipeline"],["costos","💰 Costos"]].map(([k,l])=>(
-                  <button key={k} onClick={()=>setWView(k)} style={{ background:wView===k?C.gold:"none", color:wView===k?C.navy:C.textM, border:"none", cursor:"pointer", padding:"6px 13px", fontSize:10, fontWeight:700, transition:"all 0.2s" }}>{l}</button>
-                ))}
-              </div>
-            </div>
-
-            {wView==="pipeline" ? (
-              <>
-                <Card>
-                  <CardTitle>Leads entrantes y progresión evolutiva por semana</CardTitle>
-                  <ResponsiveContainer width="100%" height={220}>
-                    <ComposedChart data={weeklyPaid}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={C.navyM} />
-                      <XAxis dataKey="sem" tick={{ fill:C.textM, fontSize:8 }} interval={1} />
-                      <YAxis tick={{ fill:C.textM, fontSize:10 }} />
-                      <Tooltip {...tt} />
-                      <Legend wrapperStyle={{ color:C.textM, fontSize:10 }} />
-                      <Bar dataKey="total"     name="Leads entrantes"      fill={C.teal}   opacity={0.3} radius={[2,2,0,0]} />
-                      <Bar dataKey="noContact" name="No contactados"       fill={C.red}    opacity={0.6} radius={[2,2,0,0]} />
-                      <Bar dataKey="mini"      name="Mini-COD (evolutivo)"  fill={C.gold}  radius={[2,2,0,0]} />
-                      <Bar dataKey="cod"       name="COD (evolutivo)"      fill={C.purple} radius={[2,2,0,0]} />
-                      <ReferenceLine x="Abr 9" stroke={C.teal} strokeDasharray="4 2" label={{ value:"UTMs activos", fill:C.teal, fontSize:9, position:"top" }} />
-                      <ReferenceLine x="May 4" stroke={C.red}  strokeDasharray="4 2" label={{ value:"Adán sale", fill:C.red, fontSize:9, position:"top" }} />
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                </Card>
-
-                <Card>
-                  <CardTitle>Tasa de Mini-COD y COD semanal (% sobre leads que entraron)</CardTitle>
-                  <ResponsiveContainer width="100%" height={190}>
-                    <LineChart data={weeklyPaid.map(w=>({
-                      ...w,
-                      rMini: w.total>0 ? +(w.mini/w.total*100).toFixed(1) : 0,
-                      rCod:  w.total>0 ? +(w.cod/w.total*100).toFixed(1)  : 0,
-                    }))}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={C.navyM} />
-                      <XAxis dataKey="sem" tick={{ fill:C.textM, fontSize:8 }} interval={1} />
-                      <YAxis tick={{ fill:C.textM, fontSize:10 }} tickFormatter={v=>`${v}%`} />
-                      <Tooltip {...tt} formatter={v=>`${v}%`} />
-                      <Legend wrapperStyle={{ color:C.textM, fontSize:10 }} />
-                      <ReferenceLine x="Abr 9" stroke={C.teal} strokeDasharray="4 2" opacity={0.6} />
-                      <ReferenceLine x="May 4" stroke={C.red}  strokeDasharray="4 2" opacity={0.6} />
-                      <Line dataKey="rMini" name="% Mini-COD" stroke={C.gold}   strokeWidth={2} dot={{ r:3 }} />
-                      <Line dataKey="rCod"  name="% COD"      stroke={C.purple} strokeWidth={2} dot={{ r:3 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                  <div style={{ marginTop:10, padding:"8px 12px", background:C.navyM+"55", borderRadius:8, fontSize:10, color:C.textM, lineHeight:1.5 }}>
-                    ⚠️ <b style={{color:C.gold}}>Sesgo de maduración:</b> las semanas más antiguas tienen tasas más altas porque sus leads han tenido más tiempo para avanzar etapas. Las últimas 4 semanas (mayo) subestimarán su tasa real hasta que pasen 4–8 semanas más.
-                  </div>
-                </Card>
-              </>
-            ) : (
-              <>
-                <Card>
-                  <CardTitle>CPL y costo por etapa semanal</CardTitle>
-                  <ResponsiveContainer width="100%" height={220}>
-                    <LineChart data={weeklyPaid}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={C.navyM} />
-                      <XAxis dataKey="sem" tick={{ fill:C.textM, fontSize:8 }} interval={1} />
-                      <YAxis tick={{ fill:C.textM, fontSize:10 }} tickFormatter={v=>`$${(v/1000).toFixed(1)}K`} />
-                      <Tooltip {...tt} formatter={v=>`$${v.toLocaleString()}`} />
-                      <Legend wrapperStyle={{ color:C.textM, fontSize:10 }} />
-                      <ReferenceLine x="Abr 9" stroke={C.teal} strokeDasharray="4 2" opacity={0.5} label={{ value:"UTMs on", fill:C.teal, fontSize:8 }} />
-                      <ReferenceLine x="May 4" stroke={C.red}  strokeDasharray="4 2" opacity={0.5} label={{ value:"Adán out", fill:C.red, fontSize:8 }} />
-                      <Line dataKey="cpl"    name="CPL"            stroke={C.teal}   strokeWidth={1.5} dot={{ r:2 }} />
-                      <Line dataKey="cpMini" name="Costo Mini-COD" stroke={C.gold}   strokeWidth={2}   dot={{ r:3 }} />
-                      <Line dataKey="cpCod"  name="Costo COD"      stroke={C.purple} strokeWidth={2}   dot={{ r:3 }} strokeDasharray="5 2" />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </Card>
-              </>
-            )}
-
-            {/* Weekly table with toggle */}
-            <Card>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
-                <div style={{ fontSize:13, fontWeight:700, color:C.text }}>Tabla semanal — 22 semanas</div>
-                <div style={{ display:"flex", background:C.navyM, borderRadius:8, overflow:"hidden" }}>
-                  {[["cohorte","📊 Por cohorte"],["actividad","⚡ Actividad real"]].map(([k,l])=>(
-                    <button key={k} onClick={()=>setWTable(k)} style={{ background:wTable===k?C.gold:"none", color:wTable===k?C.navy:C.textM, border:"none", cursor:"pointer", padding:"6px 14px", fontSize:10, fontWeight:700, transition:"all 0.2s" }}>{l}</button>
-                  ))}
-                </div>
-              </div>
-              <div style={{ background:wTable==="cohorte"?"#f0a50011":"#22d3ee11", border:`1px solid ${wTable==="cohorte"?C.gold:C.teal}44`, borderRadius:8, padding:"8px 12px", marginBottom:12, fontSize:11, color:C.textM, lineHeight:1.5 }}>
-                {wTable==="cohorte"
-                  ? "📊 Por cohorte: de los leads que entraron esa semana, cuántos llegaron alguna vez a cada etapa. Semanas recientes aparecen más bajas porque sus leads no han tenido tiempo de madurar."
-                  : "⚡ Actividad real: cuántas llamadas de Mini-COD y COD ocurrieron esa semana, sin importar cuándo entró el lead. Sin sesgo de recencia — refleja el ritmo real del equipo."}
-              </div>
-              <div style={{ overflowX:"auto" }}>
-                {wTable==="cohorte" ? (
-                  <table style={{ width:"100%", borderCollapse:"collapse", fontSize:10 }}>
-                    <thead>
-                      <tr style={{ borderBottom:`1px solid ${C.navyM}` }}>
-                        {["Semana","Leads","No cont.","Mini (evol)","COD (evol)","Dx","Ace","Rec","CPL","CP Mini","CP COD"].map(h=>(
-                          <th key={h} style={{ padding:"6px 7px", color:C.textM, fontWeight:600, textAlign:h==="Semana"?"left":"right", fontSize:9 }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {weeklyPaid.map((r,i)=>{
-                        const hl=r.highlight==="cierre"?"#10b98108":r.highlight==="mejor"?"#22d3ee08":r.highlight==="peor"?"#f43f5e08":"none";
-                        return (
-                          <tr key={i} style={{ borderBottom:`1px solid ${C.navyM}18`, background:hl }}>
-                            <td style={{ padding:"6px 7px", color:C.text, fontWeight:r.highlight?700:400, fontSize:10, whiteSpace:"nowrap" }}>
-                              {r.sem}
-                              {r.highlight==="cierre"&&<span style={{ fontSize:8,color:C.green,marginLeft:3 }}>✓CIERRE</span>}
-                              {r.highlight==="mejor" &&<span style={{ fontSize:8,color:C.teal, marginLeft:3 }}>★MEJOR</span>}
-                              {r.highlight==="peor"  &&<span style={{ fontSize:8,color:C.red,  marginLeft:3 }}>⚠PEOR</span>}
-                            </td>
-                            <td style={{ padding:"6px 7px", textAlign:"right", color:C.teal }}>{r.total}</td>
-                            <td style={{ padding:"6px 7px", textAlign:"right", color:r.noContact/r.total>0.7?C.red:C.textM }}>{r.noContact}</td>
-                            <td style={{ padding:"6px 7px", textAlign:"right", color:C.gold }}>{r.mini}</td>
-                            <td style={{ padding:"6px 7px", textAlign:"right", color:C.purple }}>{r.cod}</td>
-                            <td style={{ padding:"6px 7px", textAlign:"right", color:C.orange }}>{r.dx}</td>
-                            <td style={{ padding:"6px 7px", textAlign:"right", color:r.ace>0?C.green:C.textM, fontWeight:r.ace>0?700:400 }}>{r.ace}</td>
-                            <td style={{ padding:"6px 7px", textAlign:"right", color:r.rec>0?C.red:C.textM }}>{r.rec}</td>
-                            <td style={{ padding:"6px 7px", textAlign:"right", color:r.cpl>600?C.red:r.cpl>350?C.gold:C.green }}>${r.cpl}</td>
-                            <td style={{ padding:"6px 7px", textAlign:"right", color:r.cpMini>2000?C.red:C.textM }}>${r.cpMini.toLocaleString()}</td>
-                            <td style={{ padding:"6px 7px", textAlign:"right", color:r.cpCod>4000?C.red:C.textM }}>{r.cpCod>0?`$${r.cpCod.toLocaleString()}`:"—"}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                ) : (
-                  <table style={{ width:"100%", borderCollapse:"collapse", fontSize:10 }}>
-                    <thead>
-                      <tr style={{ borderBottom:`1px solid ${C.navyM}` }}>
-                        {["Semana","Leads nuevos","Mini-COD calls","COD calls","CP Mini real","CP COD real","Ritmo"].map(h=>(
-                          <th key={h} style={{ padding:"6px 7px", color:C.textM, fontWeight:600, textAlign:h==="Semana"||h==="Ritmo"?"left":"right", fontSize:9 }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {weeklyActivity.map((r,i)=>{
-                        const avgMini=5.2, avgCod=2.9;
-                        const gMini=r.actMini>=avgMini, gCod=r.actCod>=avgCod;
-                        return (
-                          <tr key={i} style={{ borderBottom:`1px solid ${C.navyM}18` }}>
-                            <td style={{ padding:"6px 7px", color:C.text, fontSize:10, whiteSpace:"nowrap" }}>{r.sem}</td>
-                            <td style={{ padding:"6px 7px", textAlign:"right", color:C.teal }}>{r.leads}</td>
-                            <td style={{ padding:"6px 7px", textAlign:"right" }}>
-                              <span style={{ color:gMini?C.green:C.red, fontWeight:700 }}>{r.actMini}</span>
-                              <span style={{ color:C.textM, fontSize:9, marginLeft:4 }}>{r.actMini>0?`(${(r.actMini/r.leads*100).toFixed(0)}%)`:""}</span>
-                            </td>
-                            <td style={{ padding:"6px 7px", textAlign:"right" }}>
-                              <span style={{ color:gCod?C.green:r.actCod===0?C.red:C.gold, fontWeight:700 }}>{r.actCod}</span>
-                            </td>
-                            <td style={{ padding:"6px 7px", textAlign:"right", color:r.cpMini>2000?C.red:r.cpMini>1200?C.gold:C.green }}>{r.actMini>0?`$${r.cpMini.toLocaleString()}`:"—"}</td>
-                            <td style={{ padding:"6px 7px", textAlign:"right", color:r.cpCod>3000?C.red:r.cpCod>1500?C.gold:r.cpCod===0?C.textM:C.green }}>{r.actCod>0?`$${r.cpCod.toLocaleString()}`:"—"}</td>
-                            <td style={{ padding:"6px 7px", color:C.textM, fontSize:9 }}>
-                              {r.actMini===0&&r.actCod===0?"Sin actividad":
-                               r.actMini>=8?"Alto volumen Mini-COD":
-                               r.actCod>=5?"Fuerte en CODs":
-                               r.actMini<=2&&r.actCod<=1?"Semana débil":"Normal"}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                      <tr style={{ borderTop:`2px solid ${C.navyM}`, background:C.navyM+"44" }}>
-                        <td style={{ padding:"6px 7px", color:C.gold, fontWeight:700 }}>Promedio 22s</td>
-                        <td style={{ padding:"6px 7px", textAlign:"right", color:C.textM }}>18.5</td>
-                        <td style={{ padding:"6px 7px", textAlign:"right", color:C.gold, fontWeight:700 }}>5.2 calls</td>
-                        <td style={{ padding:"6px 7px", textAlign:"right", color:C.purple, fontWeight:700 }}>2.9 calls</td>
-                        <td colSpan={3}/>
-                      </tr>
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            </Card>
-
-            <div style={{ display:"flex", flexDirection:"column", gap:8, marginTop:4 }}>
-              <Insight type="ok"      icon="🏆" text="La semana Abr 13 fue la más eficiente en paid: 13 leads, 9 Mini-CODs (69%), 6 CODs (46%) · CPL $471. Los UTMs ya estaban activos — hay datos de campaña para replicar ese rendimiento." />
-              <Insight type="critical" icon="⚠️" text="Abr 27: semana más ineficiente — 12 leads, 2 Mini-CODs, 1 COD · CPL Mini de $3,063. Con Adán activo pero sin contactar ninguno de sus 6 leads asignados esa semana." />
-              <Insight type="warning"  icon="📉" text="Desde May 4 (salida de Adán): promedio de contacto cae a ~24%. En enero era ~25%, en abril llegó a ~48% con ambos agentes. La salida de Adán redujo la capacidad a la mitad." />
-            </div>
-          </div>
-        )}
-
-        {/* ══ SEGUIMIENTO FINAL ══════════════════════════════════════ */}
-        {tab===3 && (
-          <div>
-            <h2 style={{ margin:"0 0 6px", fontSize:17, fontWeight:700 }}>Seguimiento Final — Oportunidades Activas</h2>
-            <p style={{ color:C.textM, fontSize:11, margin:"0 0 16px" }}>Leads en etapas avanzadas del pipeline (post-COD) con potencial de mover a Programa Aceptado</p>
-
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:10, marginBottom:16 }}>
-              <KPI label="En Seguimiento Final" value="13" sub="Actualizado al 9 Jun 2026"        color={C.green}  accent={C.green} />
-              <KPI label="Urgentes (verde)" value="3"      sub="Jose, Mario, Maria Fernanda"      color={C.green}  />
-              <KPI label="En seguimiento (amarillo)" value="2" sub="Juan Carlos, Armando"         color={C.gold}   />
-              <KPI label="Leads avanzados total" value="36" sub="Post-COD incluyendo otras etapas" color={C.purple} />
-            </div>
-
-            {/* Seguimiento Final cards */}
-            <div style={{ marginBottom:16 }}>
-              <div style={{ fontSize:13, fontWeight:700, color:C.text, marginBottom:10 }}>🎯 Los 3 leads en Seguimiento Final</div>
-              <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-                {seguimientoFinal.sort((a,b)=>a.semaforo==="verde"?-1:b.semaforo==="verde"?1:0).map((l,i)=>{
-                  const sc = l.semaforo==="verde"?C.green:l.semaforo==="amarillo"?C.gold:C.red;
-                  return (
-                    <div key={i} style={{ background:C.navyL, border:`2px solid ${sc}44`, borderRadius:12, padding:"16px 20px", borderLeft:`4px solid ${sc}` }}>
-                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
-                        <div>
-                          <div style={{ fontSize:15, fontWeight:800, color:C.text }}>{l.nombre}</div>
-                          <div style={{ color:C.textM, fontSize:10, marginTop:2 }}>{l.fuente} · {l.campana} · {l.agente}</div>
-                        </div>
-                        <div style={{ display:"flex", gap:10, alignItems:"center" }}>
-                          <div style={{ background:sc+"22", border:`1px solid ${sc}`, borderRadius:8, padding:"4px 12px", color:sc, fontSize:12, fontWeight:700 }}>
-                            {l.dias_seguimiento} días en proceso
-                          </div>
-                          <Semaforo color={l.semaforo} />
-                        </div>
-                      </div>
-                      <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:8, marginBottom:10 }}>
-                        {[
-                          { l:"Entrada CRM",   v:l.entrada    },
-                          { l:"COD Luisa",     v:l.cod_luisa  },
-                          { l:"COD Víctor",    v:l.cod_victor },
-                          { l:"Diagnóstico",   v:l.dx         },
-                          { l:"Última activ.", v:l.ultima_act },
-                        ].map((f,j)=>(
-                          <div key={j} style={{ background:C.navyM+"88", borderRadius:6, padding:"6px 8px" }}>
-                            <div style={{ color:C.textM, fontSize:9, marginBottom:2 }}>{f.l}</div>
-                            <div style={{ color:C.text, fontSize:10, fontWeight:600 }}>{f.v}</div>
-                          </div>
-                        ))}
-                      </div>
-                      <div style={{ background:`${sc}11`, border:`1px solid ${sc}33`, borderRadius:6, padding:"7px 10px", fontSize:11, color:C.text }}>
-                        💬 {l.nota}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* All advanced leads */}
-            <Card>
-              <CardTitle sub="19 leads con oportunidad de avanzar — ordenados por urgencia">Todos los leads pagados en etapas avanzadas (post-COD)</CardTitle>
-              <div style={{ display:"flex", gap:8, marginBottom:12 }}>
-                {[["todos","Todos (19)"],["verde","🟢 Urgente"],["amarillo","🟡 Seguimiento"],["rojo","🔴 Frío"]].map(([k,l])=>(
-                  <button key={k} onClick={()=>setSfFilter(k)} style={{ background:sfFilter===k?C.gold:C.navyM, color:sfFilter===k?C.navy:C.textM, border:"none", cursor:"pointer", padding:"5px 11px", borderRadius:6, fontSize:10, fontWeight:700, transition:"all 0.2s" }}>{l}</button>
-                ))}
-              </div>
-              <table style={{ width:"100%", borderCollapse:"collapse", fontSize:11 }}>
-                <thead>
-                  <tr style={{ borderBottom:`1px solid ${C.navyM}` }}>
-                    {["Nombre","Etapa actual","Fuente","Agente","Entrada","Días","Estado"].map(h=>(
-                      <th key={h} style={{ padding:"7px 8px", color:C.textM, fontWeight:600, textAlign:"left", fontSize:10 }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredLeads.sort((a,b)=>a.semaforo==="verde"?-1:b.semaforo==="verde"?1:a.dias-b.dias).map((l,i)=>{
-                    const sc = l.semaforo==="verde"?C.green:l.semaforo==="amarillo"?C.gold:C.red;
-                    return (
-                      <tr key={i} style={{ borderBottom:`1px solid ${C.navyM}18`, background:l.semaforo==="verde"?"#10b98108":"none" }}>
-                        <td style={{ padding:"8px", color:C.text, fontWeight:600, fontSize:11 }}>{l.nombre}</td>
-                        <td style={{ padding:"8px" }}>
-                          <span style={{ background:C.navyM, borderRadius:4, padding:"2px 6px", fontSize:9, color:C.textM }}>{l.fase}</span>
-                        </td>
-                        <td style={{ padding:"8px", color:C.textM, fontSize:10 }}>{l.fuente}</td>
-                        <td style={{ padding:"8px", color:C.textM, fontSize:10 }}>{l.agente.split(" ")[0]}</td>
-                        <td style={{ padding:"8px", color:C.textM, fontSize:10 }}>{l.entrada}</td>
-                        <td style={{ padding:"8px" }}>
-                          <span style={{ color:l.dias>60?C.red:l.dias>30?C.gold:C.green, fontWeight:700, fontSize:11 }}>{l.dias}d</span>
-                        </td>
-                        <td style={{ padding:"8px" }}><Semaforo color={l.semaforo} /></td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </Card>
-
-            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-              <Insight type="critical" icon="🚨" text="Eduardo Corona (Facebook Ads · Lookalike Zoho) completó su diagnóstico ayer (25 May). Es el lead más caliente del pipeline en este momento. Acción de cierre necesaria esta semana." />
-              <Insight type="warning"  icon="⏰" text="8 de los 16 leads en etapas avanzadas llevan más de 40 días en esa etapa sin cerrarse. El riesgo de que enfríen completamente aumenta cada semana sin contacto." />
-              <Insight type="warning"  icon="👤" text="6 leads avanzados estaban asignados a Adán Cortés (quien salió el 4 de mayo). Nadie los está trabajando actualmente. Se necesita reasignar a José Augusto o definir qué pasa con ellos." />
-              <Insight type="ok"       icon="💡" text="Si los 3 de Seguimiento Final cerraran, eso triplicaría los cierres históricos del canal pagado (de 1 a 4). Priorizar estas 3 conversaciones sobre cualquier lead nuevo esta semana." />
-            </div>
-          </div>
-        )}
-
-        {/* ══ CAMPAÑAS UTM ═══════════════════════════════════════ */}
-        {tab===4 && (
-          <div>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
-              <div>
-                <h2 style={{ margin:"0 0 3px", fontSize:17, fontWeight:700 }}>Análisis por Campaña UTM</h2>
-                <p style={{ color:C.textM, fontSize:11, margin:0 }}>Solo leads con fuente Rockin o Facebook Ads · UTMs activos desde Abr 9, 2026</p>
-              </div>
-              <div style={{ display:"flex", background:C.navyM, borderRadius:8, overflow:"hidden" }}>
-                {[["resumen","📊 Por campaña"],["creative","🎨 Por creatividad"]].map(([k,l])=>(
-                  <button key={k} onClick={()=>setCampView(k)} style={{ background:campView===k?C.gold:"none", color:campView===k?C.navy:C.textM, border:"none", cursor:"pointer", padding:"6px 12px", fontSize:10, fontWeight:700, transition:"all 0.2s" }}>{l}</button>
-                ))}
-              </div>
-            </div>
-
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:10, marginBottom:16 }}>
-              <KPI label="Con UTM registrado" value="100" sub="26% del total pagado (388)" color={C.teal} />
-              <KPI label="Sin UTM" value="288" sub="74% sin trazabilidad" color={C.red} alert />
-              <KPI label="Campañas activas" value="10" sub="Identificadas desde Abr 9" color={C.gold} />
-              <KPI label="Mejor campaña" value="Nuevos 2026" sub="77% llegan a Mini-COD" color={C.green} />
-            </div>
-
-            <div style={{ background:"#f0a50011", border:`1px solid ${C.gold}44`, borderRadius:8, padding:"10px 14px", marginBottom:16, fontSize:11, color:C.textM, lineHeight:1.6 }}>
-              ⚠️ Los UTMs se activaron el <b style={{color:C.gold}}>9 de abril de 2026</b>. Todos los leads anteriores (enero–abril 8) aparecen como "Sin UTM". Los datos de campaña son representativos solo de las últimas 7 semanas.
-            </div>
-
-            {campView==="resumen" ? (
-              <>
-                {/* Pipeline mini-bars per campaign */}
-                <Card>
-                  <CardTitle sub="Leads con UTM únicamente · ordenado por tasa de Mini-COD">Pipeline evolutivo por campaña</CardTitle>
-                  <div style={{ overflowX:"auto" }}>
-                    <table style={{ width:"100%", borderCollapse:"collapse", fontSize:11 }}>
-                      <thead>
-                        <tr style={{ borderBottom:`1px solid ${C.navyM}` }}>
-                          {["Campaña","Tipo","Leads","No contactados","Mini-COD","COD","Dx","SF","Rec","% Mini"].map(h=>(
-                            <th key={h} style={{ padding:"7px 8px", color:C.textM, fontWeight:600, textAlign:h==="Campaña"||h==="Tipo"?"left":"right", fontSize:9 }}>{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {campaignData.filter(c=>c.tipo!=="sin_utm").sort((a,b)=>(b.mini/b.n)-(a.mini/a.n)).map((r,i)=>{
-                          const rMini = r.n>0?(r.mini/r.n*100).toFixed(0):0;
-                          const tipoColor = r.tipo==="lal"?C.teal:r.tipo==="ro"?C.green:r.tipo==="int"?C.purple:C.muted;
-                          const tipoLabel = r.tipo==="lal"?"Lookalike":r.tipo==="ro"?"Rockin":r.tipo==="int"?"Interés":"Otro";
-                          return (
-                            <tr key={i} style={{ borderBottom:`1px solid ${C.navyM}18` }}>
-                              <td style={{ padding:"8px", color:C.text, fontWeight:600 }}>{r.campana}</td>
-                              <td style={{ padding:"8px" }}>
-                                <span style={{ background:tipoColor+"22", color:tipoColor, border:`1px solid ${tipoColor}44`, borderRadius:4, padding:"1px 6px", fontSize:9, fontWeight:700 }}>{tipoLabel}</span>
-                              </td>
-                              <td style={{ padding:"8px", textAlign:"right", color:C.teal }}>{r.n}</td>
-                              <td style={{ padding:"8px", textAlign:"right" }}>
-                                <span style={{ color:r.noContact/r.n>0.7?C.red:C.textM }}>{r.noContact}</span>
-                                <span style={{ color:C.textM, fontSize:9, marginLeft:3 }}>({(r.noContact/r.n*100).toFixed(0)}%)</span>
-                              </td>
-                              <td style={{ padding:"8px", textAlign:"right" }}>
-                                <div style={{ display:"flex", alignItems:"center", gap:6, justifyContent:"flex-end" }}>
-                                  <div style={{ width:40, background:C.navyM, borderRadius:3, height:6 }}>
-                                    <div style={{ width:`${Math.min(r.mini/r.n*100,100)}%`, background:C.gold, height:"100%", borderRadius:3 }} />
-                                  </div>
-                                  <span style={{ color:C.gold, fontWeight:700 }}>{r.mini}</span>
-                                </div>
-                              </td>
-                              <td style={{ padding:"8px", textAlign:"right", color:C.purple }}>{r.cod}</td>
-                              <td style={{ padding:"8px", textAlign:"right", color:C.orange }}>{r.dx}</td>
-                              <td style={{ padding:"8px", textAlign:"right", color:r.sf>0?C.green:C.textM, fontWeight:r.sf>0?700:400 }}>{r.sf}</td>
-                              <td style={{ padding:"8px", textAlign:"right", color:r.rec>0?C.red:C.textM }}>{r.rec}</td>
-                              <td style={{ padding:"8px", textAlign:"right", color:rMini>50?C.green:rMini>25?C.gold:C.red, fontWeight:700 }}>{rMini}%</td>
-                            </tr>
-                          );
-                        })}
-                        <tr style={{ borderTop:`1px solid ${C.navyM}`, background:"#f43f5e06" }}>
-                          <td colSpan={2} style={{ padding:"8px", color:C.textM, fontSize:11 }}>Sin UTM (288 leads)</td>
-                          <td style={{ padding:"8px", textAlign:"right", color:C.teal }}>288</td>
-                          <td style={{ padding:"8px", textAlign:"right", color:C.red }}>196 (68%)</td>
-                          <td style={{ padding:"8px", textAlign:"right", color:C.gold }}>97</td>
-                          <td style={{ padding:"8px", textAlign:"right", color:C.purple }}>45</td>
-                          <td style={{ padding:"8px", textAlign:"right", color:C.orange }}>6</td>
-                          <td style={{ padding:"8px", textAlign:"right", color:C.green }}>2</td>
-                          <td style={{ padding:"8px", textAlign:"right", color:C.red }}>18</td>
-                          <td style={{ padding:"8px", textAlign:"right", color:C.gold }}>34%</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </Card>
-
-                {/* Funnel mini per campaign visual */}
-                <Card>
-                  <CardTitle sub="% de leads que llegaron a cada etapa — campañas con UTM">Comparación de funnels por campaña</CardTitle>
-                  <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-                    {campaignData.filter(c=>c.tipo!=="sin_utm"&&c.n>=5).sort((a,b)=>(b.mini/b.n)-(a.mini/a.n)).map((r,i)=>(
-                      <div key={i} style={{ display:"flex", alignItems:"center", gap:12 }}>
-                        <div style={{ width:150, color:C.text, fontSize:11, fontWeight:600 }}>{r.campana}</div>
-                        <div style={{ flex:1, display:"flex", gap:2, height:18 }}>
-                          {[
-                            { val:r.n,         color:C.teal+"44",  label:"Total" },
-                            { val:r.n-r.noContact, color:C.teal,   label:"Contactados" },
-                            { val:r.mini,       color:C.gold,       label:"Mini-COD" },
-                            { val:r.cod,        color:C.purple,     label:"COD" },
-                            { val:r.dx,         color:C.orange,     label:"Dx" },
-                          ].map((b,j)=>(
-                            <div key={j} title={`${b.label}: ${b.val}`} style={{ width:`${Math.max(b.val/r.n*100,1)}%`, background:b.color, borderRadius:3, height:"100%", display:"flex", alignItems:"center", paddingLeft:4 }}>
-                              {b.val>=2&&<span style={{ color:"#fff", fontSize:8, fontWeight:700 }}>{b.val}</span>}
-                            </div>
-                          ))}
-                        </div>
-                        <div style={{ width:35, textAlign:"right", fontSize:10, color:C.textM }}>n={r.n}</div>
-                      </div>
-                    ))}
-                  </div>
-                </Card>
-              </>
-            ) : (
-              <Card>
-                <CardTitle sub="Creatividades con UTM registrado — ordenadas por Mini-COD">Pipeline por creatividad (utm_content)</CardTitle>
-                <div style={{ overflowX:"auto" }}>
-                  <table style={{ width:"100%", borderCollapse:"collapse", fontSize:11 }}>
-                    <thead>
-                      <tr style={{ borderBottom:`1px solid ${C.navyM}` }}>
-                        {["Creatividad","Campaña","Leads","No cont.","Mini-COD","COD","% Mini","% COD"].map(h=>(
-                          <th key={h} style={{ padding:"7px 8px", color:C.textM, fontWeight:600, textAlign:h==="Creatividad"||h==="Campaña"?"left":"right", fontSize:9 }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {creativeData.sort((a,b)=>(b.mini/b.n)-(a.mini/a.n)).map((r,i)=>(
-                        <tr key={i} style={{ borderBottom:`1px solid ${C.navyM}18` }}>
-                          <td style={{ padding:"8px", color:C.text, fontWeight:600 }}>{r.creative}</td>
-                          <td style={{ padding:"8px", color:C.textM, fontSize:10 }}>{r.campana}</td>
-                          <td style={{ padding:"8px", textAlign:"right", color:C.teal }}>{r.n}</td>
-                          <td style={{ padding:"8px", textAlign:"right", color:r.noContact/r.n>0.7?C.red:C.textM }}>{r.noContact}</td>
-                          <td style={{ padding:"8px", textAlign:"right" }}>
-                            <div style={{ display:"flex", alignItems:"center", gap:5, justifyContent:"flex-end" }}>
-                              <div style={{ width:35, background:C.navyM, borderRadius:3, height:5 }}>
-                                <div style={{ width:`${Math.min(r.mini/r.n*100,100)}%`, background:C.gold, height:"100%", borderRadius:3 }} />
-                              </div>
-                              <span style={{ color:C.gold, fontWeight:700 }}>{r.mini}</span>
-                            </div>
-                          </td>
-                          <td style={{ padding:"8px", textAlign:"right", color:C.purple }}>{r.cod}</td>
-                          <td style={{ padding:"8px", textAlign:"right", color:(r.mini/r.n)>0.5?C.green:(r.mini/r.n)>0.25?C.gold:C.red, fontWeight:700 }}>{(r.mini/r.n*100).toFixed(0)}%</td>
-                          <td style={{ padding:"8px", textAlign:"right", color:r.cod>0?C.purple:C.textM }}>{r.cod>0?(r.cod/r.n*100).toFixed(0)+"%":"—"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Card>
-            )}
-
-            <div style={{ display:"flex", flexDirection:"column", gap:8, marginTop:4 }}>
-              <Insight type="critical" icon="🔍" text="El 74% de los leads pagados no tiene UTM. Eso significa que los datos de campaña son parciales y no representan el comportamiento real de cada audiencia. Hasta que eso no se corrija, cualquier comparación entre campañas tiene un margen de error alto." />
-              <Insight type="ok"       icon="🏆" text="Nuevos leads 2026 (Rockin) es la campaña más eficiente: 77% de sus 9 leads llegan a Mini-COD y 44% a COD. También tiene el menor % de no contactados (22%). Escalar esta campaña tiene evidencia." />
-              <Insight type="warning"  icon="🎯" text="Interés deportes y Luxury tienen 85%+ de no contactados con muy poca progresión. Son los públicos con peor calidad relativa — aunque el problema de capacidad del equipo también impacta." />
-              <Insight type="ok"       icon="🎨" text="Video Luisa VIII es el creativo con más leads (37) y tasa de Mini-COD del 27%. Campaña 21/08 Ad4 tiene 100% de contacto y 33% COD en solo 3 leads — el mejor ratio de calidad aunque muestra pequeña." />
-            </div>
-          </div>
-        )}
-
-        {/* ══ COSTOS POR ETAPA ══════════════════════════════════════ */}
-        
-        {/* ══ OPS 8 SEMANAS ═══════════════════════════════════════ */}
-        {tab===5 && (
-          <div>
-            <h2 style={{ margin:"0 0 4px", fontSize:17, fontWeight:700 }}>OPS — Evolución Últimas 6 Semanas</h2>
-            <p style={{ color:C.textM, fontSize:11, margin:"0 0 18px" }}>Base OPS Zoho · actualizada al 9 Jun 2026 · 485 registros</p>
-
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(6,1fr)", gap:10, marginBottom:20 }}>
-              {[
-                { l:"Leads base OPS",    v:"485", c:C.teal,   s:"Al 9 Jun 2026"       },
-                { l:"Seguimiento Final", v:"13",  c:C.green,  s:"↑ 4 nuevos vs Jun 2"  },
-                { l:"Prog. Aceptado",    v:"8",   c:C.gold,   s:"+2 vs análisis anterior"},
-                { l:"Rechazados 6 sem",  v:"11",  c:C.red,    s:"May 4 – Jun 8"       },
-                { l:"Mini-COD/sem prom", v:"5.7", c:C.textM,  s:"Promedio 6 semanas"  },
-                { l:"COD/sem prom",      v:"7.3", c:C.purple, s:"Promedio 6 semanas"  },
-              ].map((k,i)=>(
-                <div key={i} style={{ background:C.navyL, border:`1px solid ${C.navyM}`, borderRadius:12, padding:"12px 14px" }}>
-                  <div style={{ color:C.textM, fontSize:9, letterSpacing:1, textTransform:"uppercase", marginBottom:3 }}>{k.l}</div>
-                  <div style={{ color:k.c, fontSize:20, fontWeight:800 }}>{k.v}</div>
-                  <div style={{ color:C.textM, fontSize:9, marginTop:2 }}>{k.s}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* Sub-tabs */}
-            <div style={{ display:"flex", gap:0, borderBottom:`1px solid ${C.navyM}`, marginBottom:20 }}>
-              {[["ops-act","⚡ Actividad real"],["ops-coh","📊 Cohorte"],["ops-sf","🎯 Seguimiento Final (9)"],["ops-rec","❌ Rechazados (11)"]].map(([k,l])=>(
-                <button key={k} onClick={()=>setOpsTab(k)} style={{ background:"none", border:"none", cursor:"pointer", padding:"9px 14px", whiteSpace:"nowrap", color:opsTab===k?C.gold:C.textM, fontWeight:opsTab===k?700:500, fontSize:11, borderBottom:opsTab===k?`2px solid ${C.gold}`:"2px solid transparent", transition:"all 0.2s" }}>{l}</button>
-              ))}
-            </div>
-
-            {/* Actividad real */}
-            {opsTab==="ops-act" && (
-              <div>
-                <Card>
-                  <CardTitle>Mini-COD y COD calls por semana — cuándo ocurrió la llamada</CardTitle>
-                  <ResponsiveContainer width="100%" height={210}>
-                    <BarChart data={opsWeeklyAct} barGap={3}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={C.navyM} />
-                      <XAxis dataKey="sem" tick={{ fill:C.textM, fontSize:10 }} />
-                      <YAxis tick={{ fill:C.textM, fontSize:10 }} />
-                      <Tooltip {...tt} />
-                      <Legend wrapperStyle={{ color:C.textM, fontSize:10 }} />
-                      <Bar dataKey="leads" name="Leads nuevos"  fill={C.teal}   opacity={0.3} radius={[3,3,0,0]} />
-                      <Bar dataKey="mini"  name="Mini-COD calls" fill={C.gold}  radius={[3,3,0,0]} />
-                      <Bar dataKey="cod"   name="COD calls"     fill={C.purple} radius={[3,3,0,0]} />
-                      <ReferenceLine y={5.8}  stroke={C.gold}   strokeDasharray="4 3" opacity={0.5} />
-                      <ReferenceLine y={7.5}  stroke={C.purple} strokeDasharray="4 3" opacity={0.5} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </Card>
-                <Card>
-                  <CardTitle>Tabla completa — actividad real</CardTitle>
-                  <table style={{ width:"100%", borderCollapse:"collapse", fontSize:11 }}>
-                    <thead>
-                      <tr style={{ borderBottom:`1px solid ${C.navyM}` }}>
-                        {["Semana","Leads","Mini-COD","COD","SF","Ace","Rec"].map(h=>(
-                          <th key={h} style={{ padding:"7px 9px", color:C.textM, fontWeight:600, textAlign:h==="Semana"?"left":"right", fontSize:10 }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {opsWeeklyAct.map((r,i)=>(
-                        <tr key={i} style={{ borderBottom:`1px solid ${C.navyM}18` }}>
-                          <td style={{ padding:"7px 9px", color:C.text, fontWeight:600 }}>{r.sem}</td>
-                          <td style={{ padding:"7px", textAlign:"right", color:C.teal }}>{r.leads}</td>
-                          <td style={{ padding:"7px", textAlign:"right", color:r.mini>=5.8?C.green:C.red, fontWeight:700 }}>{r.mini}</td>
-                          <td style={{ padding:"7px", textAlign:"right", color:r.cod>=7.5?C.green:C.gold, fontWeight:700 }}>{r.cod}</td>
-                          <td style={{ padding:"7px", textAlign:"right", color:r.sf>0?C.green:C.textM }}>{r.sf}</td>
-                          <td style={{ padding:"7px", textAlign:"right", color:r.ace>0?C.green:C.textM, fontWeight:r.ace>0?700:400 }}>{r.ace}</td>
-                          <td style={{ padding:"7px", textAlign:"right", color:r.rec>0?C.red:C.textM }}>{r.rec}</td>
-                        </tr>
-                      ))}
-                      <tr style={{ borderTop:`2px solid ${C.navyM}`, background:C.navyM+"44" }}>
-                        <td style={{ padding:"7px 9px", color:C.gold, fontWeight:700 }}>Promedio 8s</td>
-                        <td style={{ padding:"7px", textAlign:"right", color:C.textM }}>19.9</td>
-                        <td style={{ padding:"7px", textAlign:"right", color:C.gold, fontWeight:700 }}>5.8</td>
-                        <td style={{ padding:"7px", textAlign:"right", color:C.purple, fontWeight:700 }}>7.5</td>
-                        <td colSpan={4} />
-                      </tr>
-                    </tbody>
-                  </table>
-                </Card>
-              </div>
-            )}
-
-            {/* Cohorte */}
-            {opsTab==="ops-coh" && (
-              <div>
-                <div style={{ background:"#f0a50011", border:`1px solid ${C.gold}44`, borderRadius:8, padding:"9px 13px", marginBottom:16, fontSize:11, color:C.textM }}>
-                  📊 Cohorte: de los leads que entraron esa semana, cuántos llegaron alguna vez a cada etapa. Semanas recientes subestimarán su tasa hasta que los leads maduren.
-                </div>
-                <Card>
-                  <CardTitle>Tasa Mini-COD y COD por cohorte semanal</CardTitle>
-                  <ResponsiveContainer width="100%" height={210}>
-                    <LineChart data={opsWeeklyCoh}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={C.navyM} />
-                      <XAxis dataKey="sem" tick={{ fill:C.textM, fontSize:10 }} />
-                      <YAxis tick={{ fill:C.textM, fontSize:10 }} tickFormatter={v=>`${v}%`} domain={[0,80]} />
-                      <Tooltip {...tt} formatter={v=>`${v}%`} />
-                      <Legend wrapperStyle={{ color:C.textM, fontSize:10 }} />
-                      <Line dataKey="mini" name="% Mini-COD" stroke={C.gold}   strokeWidth={2.5} dot={{ r:4 }} />
-                      <Line dataKey="cod"  name="% COD"      stroke={C.purple} strokeWidth={2.5} dot={{ r:4 }} strokeDasharray="5 3" />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </Card>
-                <Card>
-                  <CardTitle>Tabla cohorte completa</CardTitle>
-                  <table style={{ width:"100%", borderCollapse:"collapse", fontSize:11 }}>
-                    <thead>
-                      <tr style={{ borderBottom:`1px solid ${C.navyM}` }}>
-                        {["Semana","n","Mini%","COD%","Dx","SF","Ace","Rec"].map(h=>(
-                          <th key={h} style={{ padding:"7px 9px", color:C.textM, fontWeight:600, textAlign:h==="Semana"?"left":"right", fontSize:10 }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {opsWeeklyCoh.map((r,i)=>(
-                        <tr key={i} style={{ borderBottom:`1px solid ${C.navyM}18`, background:r.sem==="Abr 13"?"#22d3ee06":r.sem==="Abr 27"?"#f43f5e06":"none" }}>
-                          <td style={{ padding:"7px 9px", color:C.text, fontWeight:600 }}>
-                            {r.sem}
-                            {r.sem==="Abr 13"&&<span style={{ fontSize:8, color:C.teal, marginLeft:4 }}>★MEJOR</span>}
-                            {r.sem==="Abr 27"&&<span style={{ fontSize:8, color:C.red, marginLeft:4 }}>⚠PEOR</span>}
-                          </td>
-                          <td style={{ padding:"7px", textAlign:"right", color:C.teal }}>{r.n}</td>
-                          <td style={{ padding:"7px", textAlign:"right", color:r.mini>40?C.green:r.mini>20?C.gold:C.red, fontWeight:700 }}>{r.mini}%</td>
-                          <td style={{ padding:"7px", textAlign:"right", color:r.cod>30?C.green:r.cod>15?C.gold:C.red, fontWeight:700 }}>{r.cod}%</td>
-                          <td style={{ padding:"7px", textAlign:"right", color:C.orange }}>{r.dx}</td>
-                          <td style={{ padding:"7px", textAlign:"right", color:r.sf>0?C.green:C.textM }}>{r.sf}</td>
-                          <td style={{ padding:"7px", textAlign:"right", color:r.ace>0?C.green:C.textM, fontWeight:r.ace>0?700:400 }}>{r.ace}</td>
-                          <td style={{ padding:"7px", textAlign:"right", color:r.rec>0?C.red:C.textM }}>{r.rec}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </Card>
-              </div>
-            )}
-
-            {/* Seguimiento Final */}
-            {opsTab==="ops-sf" && (
-              <div>
-                <div style={{ background:"#10b98111", border:`1px solid ${C.green}44`, borderRadius:8, padding:"9px 13px", marginBottom:16, fontSize:11, color:C.textM }}>
-                  🟢 13 leads en Seguimiento Final al 9 Jun 2026 — 4 nuevos desde el análisis del 2 de junio. Son las oportunidades más cercanas a cierre.
-                </div>
-                {opsSFLeads.map((l,i)=>{
-                  const sc = l.urgencia==="alta"?C.green:l.urgencia==="media"?C.gold:C.muted;
-                  const urgLabel = l.urgencia==="alta"?"Acción inmediata":l.urgencia==="media"?"Seguimiento":l.dias>90?"Frío — revisar":"Seguimiento";
-                  return (
-                    <div key={i} style={{ background:C.navyL, border:`1px solid ${C.navyM}`, borderLeft:`3px solid ${sc}`, borderRadius:10, padding:"14px 18px", marginBottom:10 }}>
-                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
-                        <div>
-                          <div style={{ fontSize:13, fontWeight:700, color:C.text }}>{l.nombre}</div>
-                          <div style={{ fontSize:11, color:C.textM, marginTop:3 }}>{l.fuente} · {l.agente} · Entrada: {l.entrada}</div>
-                          <div style={{ fontSize:11, color:C.textM, marginTop:3 }}>COD Luisa: {l.codL} · COD Víctor: {l.codV}</div>
-                        </div>
-                        <div style={{ textAlign:"right", flexShrink:0, marginLeft:12 }}>
-                          <div style={{ fontSize:20, fontWeight:800, color:l.dias>90?C.red:l.dias>50?C.gold:C.green }}>{l.dias}d</div>
-                          <div style={{ fontSize:10, color:sc, fontWeight:700 }}>{urgLabel}</div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Rechazados */}
-            {opsTab==="ops-rec" && (
-              <div>
-                {/* Reasons summary */}
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12, marginBottom:18 }}>
-                  {[
-                    { razon:"Sin presupuesto",       n:3, pct:"21%", leads:"Octavio, William, Vianey", color:C.red    },
-                    { razon:"Perfil no califica",    n:2, pct:"14%", leads:"Virginia (jubilada), Octavio (sin empresa)", color:C.orange },
-                    { razon:"Ghost (no responde)",   n:1, pct:"7%",  leads:"Hector", color:C.muted  },
-                    { razon:"Sin nota (José A.)",    n:6, pct:"55%", leads:"6 leads sin razón documentada", color:C.red   },
-                    { razon:"Ghost (no responde)",   n:1, pct:"9%",  leads:"Hector — no contestó", color:C.gold  },
-                  ].map((r,i)=>(
-                    <div key={i} style={{ background:C.navyL, border:`1px solid ${r.color}44`, borderLeft:`3px solid ${r.color}`, borderRadius:10, padding:"12px 14px" }}>
-                      <div style={{ color:r.color, fontSize:18, fontWeight:800 }}>{r.n} <span style={{ fontSize:11, fontWeight:400 }}>({r.pct})</span></div>
-                      <div style={{ color:C.text, fontSize:12, fontWeight:600, marginTop:3 }}>{r.razon}</div>
-                      <div style={{ color:C.textM, fontSize:10, marginTop:3 }}>{r.leads}</div>
-                    </div>
-                  ))}
-                </div>
-
-                <Card>
-                  <CardTitle>Detalle de los 14 rechazados — con notas de descarte</CardTitle>
-                  <table style={{ width:"100%", borderCollapse:"collapse", fontSize:11 }}>
-                    <thead>
-                      <tr style={{ borderBottom:`1px solid ${C.navyM}` }}>
-                        {["Nombre","Fuente","Agente","Semana","Nota de descarte"].map(h=>(
-                          <th key={h} style={{ padding:"7px 9px", color:C.textM, fontWeight:600, textAlign:"left", fontSize:10 }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {opsRecLeads.map((r,i)=>(
-                        <tr key={i} style={{ borderBottom:`1px solid ${C.navyM}18` }}>
-                          <td style={{ padding:"8px 9px", color:C.text, fontWeight:600 }}>{r.nombre}</td>
-                          <td style={{ padding:"8px", color:C.textM, fontSize:10 }}>{r.fuente}</td>
-                          <td style={{ padding:"8px", color:r.agente==="Adán"?C.red:C.textM, fontSize:10 }}>{r.agente}</td>
-                          <td style={{ padding:"8px", color:C.textM, fontSize:10, whiteSpace:"nowrap" }}>{r.sem}</td>
-                          <td style={{ padding:"8px", color:r.nota==="—"?C.muted:C.text, fontSize:10, fontStyle:r.nota==="—"?"italic":"normal", maxWidth:280 }}>{r.nota}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </Card>
-
-                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                  <Insight type="critical" icon="📋" text="3 de 11 rechazados son explícitamente por falta de presupuesto y 2 por perfil incorrecto (jubilada, desempleada). Estos perfiles deberían filtrarse antes del Mini-COD con el formulario del sitio web." />
-                  <Insight type="warning"  icon="💸" text="3 rechazados explícitamente por falta de presupuesto (Octavio, William, Vianey) y 2 por perfil incorrecto (Virginia jubilada, Octavio sin empresa). Estos son perfiles que deberían filtrarse antes del Mini-COD." />
-                  <Insight type="ok"       icon="✅" text="José Augusto documenta bien los rechazos — 10 de 11 tienen nota. La calidad del registro mejoró desde la salida de Adán (May 4)." />
-                  <Insight type="ok"       icon="💡" text="Implementar un campo obligatorio de 'razón de descarte' en ZOHO antes de mover a Programa Rechazado. Con 3-4 meses de datos se pueden identificar qué segmentos de campaña generan más rechazos por perfil." />
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-{tab===6 && (
-          <div>
-            <h2 style={{ margin:"0 0 6px", fontSize:17, fontWeight:700 }}>Costos por Etapa — Fuentes Pagadas</h2>
-            <p style={{ color:C.textM, fontSize:11, margin:"0 0 16px" }}>Inversión total / leads evolutivos que llegaron a cada etapa · $119,970 MXN total</p>
-
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:10, marginBottom:16 }}>
-              {[
-                { l:"CPL (lead pagado)", v:"$309",    c:C.teal,   sub:"$119,970 / 388 leads" },
-                { l:"Costo Mini-COD",   v:"$952",    c:C.gold,   sub:"$119,970 / 126 mini-CODs" },
-                { l:"Costo COD",        v:"$2,424",  c:C.purple, sub:"$119,970 / 49.5 CODs" },
-                { l:"Costo Diagnóstico",v:"$16,710", c:C.orange, sub:"$119,970 / 7.2 Dx" },
-                { l:"Costo Cierre",     v:"$119,970",c:C.green,  sub:"Solo 1 cierre" },
-              ].map((k,i)=>(
-                <div key={i} style={{ background:C.navyL, border:`1px solid ${C.navyM}`, borderRadius:12, padding:"14px 16px" }}>
-                  <div style={{ color:C.textM, fontSize:9, letterSpacing:1, textTransform:"uppercase", marginBottom:4 }}>{k.l}</div>
-                  <div style={{ color:k.c, fontSize:i===4?18:22, fontWeight:800 }}>{k.v}</div>
-                  <div style={{ color:C.textM, fontSize:9, marginTop:3 }}>{k.sub}</div>
-                </div>
-              ))}
-            </div>
-
-            <Card>
-              <CardTitle sub="Cada etapa cuesta N veces más que la anterior">Escalera de costos — de lead a cierre</CardTitle>
-              {[
-                { etapa:"Lead pagado (CPL)",  costo:309,    icon:"🌐", prev:null },
-                { etapa:"Mini-COD",          costo:952,    icon:"📞", prev:309  },
-                { etapa:"COD",               costo:2424,   icon:"🤝", prev:952  },
-                { etapa:"Diagnóstico",        costo:16710,  icon:"🔍", prev:2424 },
-                { etapa:"Cierre",            costo:119970, icon:"🏆", prev:16710},
-              ].map((c,i)=>{
-                const cols=[C.teal,C.gold,C.purple,C.orange,C.green];
-                const w=Math.max((c.costo/119970)*100,2);
-                return (
-                  <div key={i} style={{ display:"flex", alignItems:"center", gap:12, marginBottom:9 }}>
-                    <div style={{ width:130, display:"flex", alignItems:"center", gap:7 }}>
-                      <span style={{ fontSize:14 }}>{c.icon}</span>
-                      <span style={{ color:C.text, fontSize:11, fontWeight:600 }}>{c.etapa}</span>
-                    </div>
-                    <div style={{ flex:1, background:C.navyM, borderRadius:6, height:32 }}>
-                      <div style={{ width:`${w}%`, background:`linear-gradient(90deg,${cols[i]}77,${cols[i]})`, height:"100%", borderRadius:6, display:"flex", alignItems:"center", paddingLeft:10 }}>
-                        <span style={{ color:"#fff", fontWeight:800, fontSize:12 }}>${c.costo.toLocaleString()}</span>
-                      </div>
-                    </div>
-                    <div style={{ width:55, textAlign:"right", fontSize:10, color:C.textM }}>
-                      {c.prev ? `×${(c.costo/c.prev).toFixed(1)}` : "base"}
-                    </div>
-                  </div>
-                );
-              })}
-              <div style={{ marginTop:14, display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10 }}>
-                {[
-                  { l:"Ticket mensual", v:"$50,000", c:C.green  },
-                  { l:"Costo adquirir cliente", v:"$119,970*", c:C.red   },
-                  { l:"ROI (desde 2do mes)", v:"+∞", c:C.gold },
-                ].map((r,i)=>(
-                  <div key={i} style={{ background:C.navyM+"55", borderRadius:8, padding:"10px 14px", textAlign:"center" }}>
-                    <div style={{ color:C.textM, fontSize:9, marginBottom:3 }}>{r.l}</div>
-                    <div style={{ color:r.c, fontWeight:800, fontSize:18 }}>{r.v}</div>
-                  </div>
-                ))}
-              </div>
-              <div style={{ fontSize:9, color:C.textM, marginTop:8 }}>* Con un solo cierre en todo el período. Con 3 cierres el costo por cliente bajaría a $39,990 MXN, con 6 a $19,995 MXN.</div>
-            </Card>
-
-            <Card>
-              <CardTitle>Proyección: ¿qué pasa si mejora la tasa de contacto?</CardTitle>
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10 }}>
-                {[
-                  { escenario:"Actual",       contacto:"31%", mini:126, cod:50,  cierres:1, cost:119970, color:C.red    },
-                  { escenario:"Objetivo 50%", contacto:"50%", mini:190, cod:75,  cierres:2, cost:59985,  color:C.gold   },
-                  { escenario:"Objetivo 70%", contacto:"70%", mini:265, cod:105, cierres:3, cost:39990,  color:C.green  },
-                ].map((s,i)=>(
-                  <div key={i} style={{ background:C.navyM+"55", border:`1px solid ${s.color}44`, borderRadius:10, padding:"14px" }}>
-                    <div style={{ color:s.color, fontSize:11, fontWeight:700, marginBottom:8 }}>{s.escenario}</div>
-                    {[
-                      { l:"Tasa contacto", v:s.contacto },
-                      { l:"Mini-CODs est.", v:s.mini },
-                      { l:"CODs est.",      v:s.cod  },
-                      { l:"Cierres est.",   v:s.cierres },
-                      { l:"Costo/cierre",  v:`$${s.cost.toLocaleString()}` },
-                    ].map((r,j)=>(
-                      <div key={j} style={{ display:"flex", justifyContent:"space-between", padding:"5px 0", borderBottom:`1px solid ${C.navyM}`, fontSize:11 }}>
-                        <span style={{ color:C.textM }}>{r.l}</span>
-                        <span style={{ color:j===4?s.color:C.text, fontWeight:j===4?700:500 }}>{r.v}</span>
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-              <div style={{ fontSize:9, color:C.textM, marginTop:8 }}>Estimaciones basadas en tasas evolutivas históricas. Mantiene inversión constante en $119,970 MXN.</div>
-            </Card>
-
-            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-              <Insight type="critical" icon="💸" text="El costo por cierre actual ($119,970) es igual a la inversión total — porque solo hay 1 cierre. Con 3 cierres el costo baja a $40K MXN, con 6 a $20K. El canal es rentable desde el primer mes si se cierra." />
-              <Insight type="ok"       icon="📈" text="Aumentar la tasa de contacto del 31% al 50% (sin cambiar inversión ni volumen) podría duplicar los cierres. No es un problema de presupuesto, es de capacidad operativa." />
-            </div>
-          </div>
-        )}
-
-      </div>
-
-      <div style={{ borderTop:`1px solid ${C.navyM}`, padding:"10px 24px", display:"flex", justifyContent:"space-between", alignItems:"center", background:C.navyL }}>
-        <span style={{ color:C.textM, fontSize:9 }}>Fuentes: Rockin + Facebook Ads únicamente · 408 de 485 leads totales · $119,970 MXN · 9 Jun 2026</span>
-        <div style={{ display:"flex", gap:5, alignItems:"center" }}>
-          <div style={{ width:6,height:6,borderRadius:"50%",background:C.green }} />
-          <span style={{ color:C.textM, fontSize:9 }}>Datos al día de hoy</span>
-        </div>
-      </div>
-    </div>
-  );
+function setScenario(s) {
+  currentScenario = s;
+  document.querySelectorAll('.sc-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-'+s).classList.add('active');
+  update();
 }
+
+function resetDefaults() {
+  document.getElementById('inp-inv').value = 100000;
+  document.getElementById('inp-precio').value = 1500;
+  document.getElementById('inp-cr-apro').value = 69;
+  document.getElementById('inp-cr-trial').value = 41;
+  document.getElementById('inp-cr-conv').value = 95;
+  document.getElementById('inp-cpa').value = 298;
+  setScenario('base');
+}
+
+// ─── FORMATO ──────────────────────────────────────────────────
+const fmtN = (n,d=0) => isFinite(n)&&!isNaN(n) ? n.toLocaleString('es-MX',{maximumFractionDigits:d,minimumFractionDigits:d}) : '—';
+const fmtP = (n) => '$'+fmtN(n,0);
+const fmtPct = (v) => fmtN(v*100,1)+'%';
+const clrCR = (v) => v>=0.6?'green-val':v>=0.4?'yellow-val':'red-val';
+
+// ─── BUILD MODEL ──────────────────────────────────────────────
+function buildModel() {
+  const invSem2 = Number(document.getElementById('inp-inv').value);
+  const precio  = Number(document.getElementById('inp-precio').value);
+  const crApro  = Number(document.getElementById('inp-cr-apro').value)/100;
+  const crTrial = Number(document.getElementById('inp-cr-trial').value)/100;
+  const crConv  = Number(document.getElementById('inp-cr-conv').value)/100;
+  const cpa     = Math.max(1, Number(document.getElementById('inp-cpa').value));
+  const aplicList = SCENARIOS[currentScenario].aplic(invSem2, cpa);
+  const aplicDerived = Math.round(invSem2 / cpa);
+
+  // Update labels
+  document.getElementById('lbl-cr-apro').textContent = fmtN(crApro*100,0)+'%';
+  document.getElementById('lbl-cr-trial').textContent = fmtN(crTrial*100,0)+'%';
+  document.getElementById('lbl-cr-conv').textContent = fmtN(crConv*100,0)+'%';
+  document.getElementById('lbl-inv').textContent = fmtP(invSem2);
+  document.getElementById('lbl-precio').textContent = fmtP(precio);
+  document.getElementById('lbl-cpa').textContent = fmtP(cpa);
+  document.getElementById('lbl-aplic-derivado').textContent = fmtN(aplicDerived,0) + ' aplic/mes';
+
+  const rows = REAL.map(r=>({...r,tipo:'real'}));
+  for (let i=0;i<6;i++) {
+    const m=i+7;
+    const aplic=aplicList[i];
+    const apro=Math.round(aplic*crApro);
+    const trial=Math.round(apro*crTrial);
+    const extra=i===0?BACKLOG:0;
+    const cust=trial*crConv+extra;
+    rows.push({m,mes:MESES[m-1],aplic,apro,trial,cust,inv:invSem2,tipo:'proy'});
+  }
+
+  const totInv = INV_SEM1 + invSem2*6;
+  const totCust = rows.reduce((a,r)=>a+r.cust,0);
+  const totAplic = rows.reduce((a,r)=>a+r.aplic,0);
+  const totTrial = rows.reduce((a,r)=>a+r.trial,0);
+  const cac = totInv/totCust;
+  const mrr = totCust*precio;
+  const payback = cac/precio;
+  const ltv = precio*12;
+  const ltvCac = ltv/cac;
+  const roi = (mrr*12)/totInv*100;
+
+  const sem2Cust = rows.filter(r=>r.m>6).reduce((a,r)=>a+r.cust,0);
+  const sem1Cust = REAL.reduce((a,r)=>a+r.cust,0);
+
+  return { rows, totInv, totCust, totAplic, totTrial, cac, mrr, payback, ltv, ltvCac, roi,
+           sem1Cust, sem2Cust, crApro, crTrial, crConv, precio, invSem2, aplicList, cpa };
+}
+
+// ─── RENDER ───────────────────────────────────────────────────
+function update() {
+  const M = buildModel();
+
+  // Scenario desc
+  document.getElementById('scenario-desc').textContent =
+    `${SCENARIOS[currentScenario].label}: ${SCENARIOS[currentScenario].desc} · ${fmtN(M.aplicList[0],0)} aplic/mes · CPA ${fmtP(M.cpa)} · CR aprobación ${fmtN(M.crApro*100,0)}% · CR trial ${fmtN(M.crTrial*100,0)}%`;
+
+  // KPIs
+  document.getElementById('kpi-cust').textContent = fmtN(M.totCust,0);
+  document.getElementById('kpi-cust-sub').textContent = `Sem1: ${fmtN(M.sem1Cust,0)} real · Sem2: ~${fmtN(M.sem2Cust,0)} proy`;
+  document.getElementById('kpi-cac').textContent = fmtP(M.cac);
+  document.getElementById('kpi-cac-sub').textContent = `Inversión total: ${fmtP(M.totInv)}`;
+  document.getElementById('kpi-mrr').textContent = fmtP(M.mrr);
+  document.getElementById('kpi-mrr-sub').textContent = `${fmtN(M.totCust,0)} × ${fmtP(M.precio)}/mes`;
+  document.getElementById('kpi-payback').textContent = fmtN(M.payback,1);
+
+  // Funnel
+  const avgSem2 = M.rows.filter(r=>r.m>6);
+  const avgAplic = avgSem2.reduce((a,r)=>a+r.aplic,0)/6;
+  const avgApro  = avgSem2.reduce((a,r)=>a+r.apro,0)/6;
+  const avgTrial = avgSem2.reduce((a,r)=>a+r.trial,0)/6;
+  const avgCust  = avgSem2.reduce((a,r)=>a+r.cust,0)/6;
+  const funnelData = [
+    {name:'Aplicantes', val:avgAplic, color:'#5B9CF6', cr:null},
+    {name:'Aprobados',  val:avgApro,  color:'#7B6EF6', cr:M.crApro},
+    {name:'Trials',     val:avgTrial, color:'#2ECC8F', cr:M.crTrial},
+    {name:'Customers',  val:avgCust,  color:'#F0A842', cr:M.crConv},
+  ];
+  document.getElementById('funnel-rows').innerHTML = funnelData.map(f=>`
+    <div class="funnel-row">
+      <span class="funnel-name">${f.name}</span>
+      <div class="funnel-bar-outer">
+        <div class="funnel-bar-inner" style="width:${Math.min(100,f.val/avgAplic*100)}%;background:${f.color}18;border:1px solid ${f.color}44;color:${f.color}">
+          ${fmtN(f.val,0)}/mes
+        </div>
+      </div>
+      <span class="funnel-cr" style="color:${f.cr?f.cr>=0.6?'var(--green)':f.cr>=0.35?'var(--yellow)':'var(--red)':'var(--text3)'}">${f.cr?fmtPct(f.cr):'base'}</span>
+    </div>`).join('');
+
+  // Chart
+  const maxCust = Math.max(...M.rows.map(r=>r.cust));
+  document.getElementById('chart-bars').innerHTML = M.rows.map(r=>{
+    const h = Math.max(2, Math.round((r.cust/maxCust)*140));
+    const color = r.tipo==='real'?'#5B9CF6':'var(--accent)';
+    const textColor = r.tipo==='real'?'#5B9CF6':'#B8B0FF';
+    return `<div class="chart-col">
+      <div class="chart-bar-wrap">
+        <div class="chart-bar" style="height:${h}px;background:${color}22;border:1px solid ${color}55;color:${textColor}">
+          ${r.cust>=15?fmtN(r.cust,0):''}
+        </div>
+      </div>
+      <span class="chart-label">${r.mes}</span>
+    </div>`;
+  }).join('');
+
+  // Table
+  document.getElementById('main-table').innerHTML = [
+    ...M.rows.map((r,i)=>{
+      const cac = r.inv/r.cust;
+      const mrr = r.cust*M.precio;
+      const crApro = r.apro/r.aplic;
+      const crTrial = r.trial/r.apro;
+      const isReal = r.tipo==='real';
+      return `<tr class="${isReal?'real-row':'proj-row'}">
+        <td>${r.mes} <span class="badge ${isReal?'badge-real':'badge-proy'}">${isReal?'REAL':'PROY'}</span></td>
+        <td class="dim">${fmtP(r.inv)}</td>
+        <td>${fmtN(r.aplic)}</td>
+        <td>${fmtN(r.apro)}</td>
+        <td class="${clrCR(crApro)}">${fmtPct(crApro)}</td>
+        <td>${fmtN(r.trial)}</td>
+        <td class="${clrCR(crTrial)}">${fmtPct(crTrial)}</td>
+        <td class="${isReal?'':'highlight'}">${fmtN(r.cust,0)}</td>
+        <td>${isFinite(cac)?fmtP(cac):'—'}</td>
+        <td>${fmtP(mrr)}</td>
+      </tr>`;
+    }),
+    `<tr class="total-row">
+      <td>TOTAL AÑO</td>
+      <td class="dim">${fmtP(M.totInv)}</td>
+      <td>${fmtN(M.totAplic)}</td>
+      <td>—</td><td>—</td>
+      <td>${fmtN(M.totTrial,0)}</td><td>—</td>
+      <td class="highlight">${fmtN(M.totCust,0)}</td>
+      <td>${fmtP(M.cac)}</td>
+      <td>${fmtP(M.mrr)}</td>
+    </tr>`
+  ].join('');
+
+  // Metrics
+  document.getElementById('met-inv').textContent = fmtP(M.totInv);
+  document.getElementById('met-roi').textContent = fmtN(M.roi,1)+'%';
+  document.getElementById('met-ltv').textContent = fmtP(M.ltv);
+  document.getElementById('met-trials').textContent = fmtN(M.totTrial,0);
+  document.getElementById('met-aplic').textContent = fmtN(M.totAplic,0);
+  const ltvCacColor = M.ltvCac>=3?'var(--green)':M.ltvCac>=2?'var(--yellow)':'var(--red)';
+  document.getElementById('met-ltvcac').innerHTML = `<span style="color:${ltvCacColor}">${fmtN(M.ltvCac,1)}x</span>`;
+
+  // Sensitivity: +10% en cada variable
+  const sensItems = [
+    { label:'Inversión +10%',        fn:()=>{ const m2=buildModelWith({invSem2:M.invSem2*1.1}); return m2.totCust-M.totCust; }},
+    { label:'Costo/aplic -10%',      fn:()=>{ const m2=buildModelWith({cpa:M.cpa*0.9}); return m2.totCust-M.totCust; }},
+    { label:'CR Aprobación +10pts',  fn:()=>{ const m2=buildModelWith({crApro:Math.min(0.99,M.crApro+0.1)}); return m2.totCust-M.totCust; }},
+    { label:'CR Trial +10pts',       fn:()=>{ const m2=buildModelWith({crTrial:Math.min(0.99,M.crTrial+0.1)}); return m2.totCust-M.totCust; }},
+    { label:'CR Conversión +5pts',   fn:()=>{ const m2=buildModelWith({crConv:Math.min(0.99,M.crConv+0.05)}); return m2.totCust-M.totCust; }},
+  ];
+  const sensVals = sensItems.map(s=>s.fn());
+  const maxSens = Math.max(...sensVals);
+  document.getElementById('sensitivity-rows').innerHTML = sensItems.map((s,i)=>{
+    const v=sensVals[i];
+    const w=Math.max(2,Math.round(v/maxSens*100));
+    const color=i<=1?'var(--blue)':i<=3?'var(--green)':'var(--accent)';
+    return `<div class="sens-row">
+      <span class="sens-label">${s.label}</span>
+      <div class="sens-bar-wrap">
+        <div class="sens-bar" style="width:${w}%;background:${color}22;border:1px solid ${color}55;color:${color}">
+          ${v>=10?'+'+fmtN(v,0)+' cust':''}
+        </div>
+      </div>
+      <span class="sens-val" style="color:${color}">+${fmtN(v,0)}</span>
+    </div>`;
+  }).join('');
+
+  // Insights
+  const insights = [];
+  if (M.crTrial < 0.35) insights.push({icon:'⚠️', text:`El CR de activación de trial (${fmtPct(M.crTrial)}) está <strong>por debajo del histórico</strong>. Mejorarlo al 50% añadiría ~${fmtN(buildModelWith({crTrial:0.5}).totCust-M.totCust,0)} customers más.`});
+  if (M.ltvCac < 3) insights.push({icon:'📉', text:`El ratio LTV/CAC de <strong>${fmtN(M.ltvCac,1)}x</strong> está por debajo del benchmark saludable de 3x. Considera reducir el CAC o aumentar el precio.`});
+  if (M.payback < 2) insights.push({icon:'🚀', text:`Payback period de <strong>${fmtN(M.payback,1)} meses</strong> — excelente eficiencia. El CAC se recupera muy rápido con el precio actual.`});
+  if (M.sem2Cust > M.sem1Cust) insights.push({icon:'📈', text:`El semestre 2 proyecta <strong>${fmtN(M.sem2Cust,0)} customers</strong>, superando el sem1 real (${fmtN(M.sem1Cust,0)}). El momentum está acelerando.`});
+  insights.push({icon:'🎯', text:`Con el escenario actual, <strong>julio tendrá un spike de ${fmtN(REAL[4].cust*M.crConv+REAL[5].trial*M.crConv+BACKLOG,0)} customers</strong> por el backlog de may+jun pendiente de convertir.`});
+  document.getElementById('insight-strip').innerHTML = insights.slice(0,4).map(i=>
+    `<div class="insight-card"><div class="insight-icon">${i.icon}</div><div class="insight-text">${i.text}</div></div>`
+  ).join('');
+}
+
+function buildModelWith(overrides={}) {
+  const invSem2 = overrides.invSem2 || Number(document.getElementById('inp-inv').value);
+  const crApro  = overrides.crApro  || Number(document.getElementById('inp-cr-apro').value)/100;
+  const crTrial = overrides.crTrial || Number(document.getElementById('inp-cr-trial').value)/100;
+  const crConv  = overrides.crConv  || Number(document.getElementById('inp-cr-conv').value)/100;
+  const precio  = Number(document.getElementById('inp-precio').value);
+  const cpa     = overrides.cpa || Math.max(1, Number(document.getElementById('inp-cpa').value));
+  const aplicMult = overrides.aplicMult || 1;
+  const aplicList = SCENARIOS[currentScenario].aplic(invSem2, cpa).map(v=>Math.round(v*aplicMult));
+
+  let totCust=REAL.reduce((a,r)=>a+r.cust,0);
+  for(let i=0;i<6;i++){
+    const aplic=aplicList[i]; const apro=Math.round(aplic*crApro);
+    const trial=Math.round(apro*crTrial); const extra=i===0?BACKLOG:0;
+    totCust+=trial*crConv+extra;
+  }
+  const totInv=INV_SEM1+invSem2*6;
+  return {totCust, totInv, cac:totInv/totCust};
+}
+
+// Init
+update();
+</script>
+</body>
+</html>
