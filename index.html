@@ -239,6 +239,24 @@
   </div>
 
   <div class="sidebar-section">
+    <div class="sidebar-label">Retención</div>
+    <div class="input-group">
+      <div class="input-label">Churn rate mensual <span id="lbl-churn"></span></div>
+      <input type="range" id="inp-churn" min="1" max="40" value="15" step="1" oninput="update()">
+    </div>
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;margin-top:4px">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">
+        <span>LTV implícito</span><span>Meses activo promedio</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <div style="font-family:var(--mono);font-size:16px;font-weight:600;color:var(--green)" id="lbl-ltv-real">—</div>
+        <div style="font-family:var(--mono);font-size:14px;font-weight:500;color:var(--text2)" id="lbl-vida">—</div>
+      </div>
+      <div style="font-size:10px;color:var(--text3);margin-top:2px">= Precio / Churn rate</div>
+    </div>
+  </div>
+
+  <div class="sidebar-section">
     <div class="sidebar-label">Costo por aplicación</div>
     <div class="input-group">
       <div class="input-label">Costo por aplicación <span id="lbl-cpa"></span></div>
@@ -287,7 +305,7 @@
       <div class="kpi-sub" id="kpi-cac-sub">—</div>
     </div>
     <div class="kpi-card blue">
-      <div class="kpi-label">MRR al cierre</div>
+      <div class="kpi-label">MRR diciembre (con churn)</div>
       <div class="kpi-value" id="kpi-mrr">—</div>
       <div class="kpi-sub" id="kpi-mrr-sub">—</div>
     </div>
@@ -332,7 +350,7 @@
             <th>+ Backlog</th>
             <th>Total cust.</th>
             <th>CAC</th>
-            <th>MRR nuevo</th>
+            <th>MRR activos<br><span style='font-weight:400;font-size:10px'>con churn</span></th>
           </tr>
         </thead>
         <tbody id="main-table"></tbody>
@@ -348,24 +366,24 @@
       <div class="metric-box-sub">Sem1 real + Sem2 presupuesto</div>
     </div>
     <div class="metric-box">
-      <div class="metric-box-label">ROI (MRR / Inversión)</div>
+      <div class="metric-box-label">MRR acumulado año</div>
+      <div class="metric-box-val" id="met-mrracum">—</div>
+      <div class="metric-box-sub">Suma de MRR mensual con churn</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-box-label">ROI (MRR acum / Inversión)</div>
       <div class="metric-box-val" id="met-roi">—</div>
-      <div class="metric-box-sub">MRR anual acumulado vs. inversión total</div>
+      <div class="metric-box-sub">Ingresos recurrentes vs. inversión total</div>
     </div>
     <div class="metric-box">
-      <div class="metric-box-label">LTV estimado (12 meses)</div>
+      <div class="metric-box-label">LTV real (precio / churn)</div>
       <div class="metric-box-val" id="met-ltv">—</div>
-      <div class="metric-box-sub">Precio/mes × 12 meses por customer</div>
+      <div class="metric-box-sub" id="met-ltv-sub">Vida promedio del customer</div>
     </div>
     <div class="metric-box">
-      <div class="metric-box-label">Trials proyectados año</div>
-      <div class="metric-box-val" id="met-trials">—</div>
-      <div class="metric-box-sub">Incluye backlog may+jun (+105)</div>
-    </div>
-    <div class="metric-box">
-      <div class="metric-box-label">Aplicantes proyectados año</div>
-      <div class="metric-box-val" id="met-aplic">—</div>
-      <div class="metric-box-sub">Acumulado 12 meses</div>
+      <div class="metric-box-label">Activos diciembre</div>
+      <div class="metric-box-val" id="met-activos">—</div>
+      <div class="metric-box-sub">Miembros activos proyectados al cierre</div>
     </div>
     <div class="metric-box">
       <div class="metric-box-label">LTV / CAC ratio</div>
@@ -504,6 +522,7 @@ function resetDefaults() {
   document.getElementById('inp-cr-trial').value = 41;
   document.getElementById('inp-cr-conv').value = 95;
   document.getElementById('inp-cpa').value = 383;
+  document.getElementById('inp-churn').value = 15;
   setScenario('base');
 }
 
@@ -532,6 +551,10 @@ function buildModel() {
   document.getElementById('lbl-precio').textContent = fmtP(precio);
   document.getElementById('lbl-cpa').textContent = fmtP(cpa);
   document.getElementById('lbl-aplic-derivado').textContent = fmtN(aplicDerived,0) + ' aplic/mes';
+  const churnVal = Number(document.getElementById('inp-churn').value)/100;
+  document.getElementById('lbl-churn').textContent = fmtN(churnVal*100,0)+'%';
+  document.getElementById('lbl-ltv-real').textContent = fmtP(precio/churnVal);
+  document.getElementById('lbl-vida').textContent = fmtN(1/churnVal,1)+' meses';
 
   const rows = REAL.map(r=>({...r,tipo:'real',custPropio:r.cust,backlogExtra:0}));
   for (let i=0;i<6;i++) {
@@ -545,22 +568,47 @@ function buildModel() {
     rows.push({m,mes:MESES[m-1],aplic,apro,trial,cust,custPropio,backlogExtra:extra,inv:invSem2,tipo:'proy'});
   }
 
-  const totInv = INV_SEM1 + invSem2*6;
+  const totInv  = INV_SEM1 + invSem2*6;
   const totCust = rows.reduce((a,r)=>a+r.cust,0);
   const totAplic = rows.reduce((a,r)=>a+r.aplic,0);
   const totTrial = rows.reduce((a,r)=>a+r.trial,0);
-  const cac = totInv/totCust;
-  const mrr = totCust*precio;
-  const payback = cac/precio;
-  const ltv = precio*12;
-  const ltvCac = ltv/cac;
-  const roi = (mrr*12)/totInv*100;
+  const cac     = totInv/totCust;
+  const churn   = Number(document.getElementById('inp-churn').value)/100;
+
+  // ── MRR con churn acumulado mes a mes ──────────────────────────
+  // Partimos de los customers reales al inicio de julio (~322 activos sem1)
+  // y simulamos mes a mes: activos_prev × (1-churn) + nuevos_del_mes
+  let activosMes = REAL.reduce((a,r)=>a+r.cust,0); // base real sem1 ≈ 322
+  const mrrMensual = [];
+  rows.forEach((r,i) => {
+    if (r.tipo === 'real') {
+      // Meses reales: usamos customers reales sin aplicar churn (ya ocurrió)
+      activosMes = r.cust > 0 ? activosMes + r.cust : activosMes;
+      mrrMensual.push({ mes: r.mes, activos: activosMes, mrr: activosMes * precio });
+    } else {
+      // Meses proyectados: aplicamos churn sobre base anterior + nuevos
+      activosMes = Math.round(activosMes * (1 - churn) + r.cust);
+      mrrMensual.push({ mes: r.mes, activos: activosMes, mrr: activosMes * precio });
+    }
+  });
+
+  const mrrDic    = mrrMensual[mrrMensual.length-1].mrr; // MRR en diciembre
+  const activosDic = mrrMensual[mrrMensual.length-1].activos;
+  const ltv       = precio / churn;           // LTV real = precio / churn
+  const vidaMeses = 1 / churn;               // meses activo en promedio
+  const ltvCac    = ltv / cac;
+  const payback   = cac / precio;
+  const mrrAcum   = mrrMensual.filter(m=>m.mrr>0).reduce((a,m)=>a+m.mrr,0);
+  const roi       = (mrrAcum / totInv) * 100;
+  // Legacy mrr = dic para KPI card
+  const mrr = mrrDic;
 
   const sem2Cust = rows.filter(r=>r.m>6).reduce((a,r)=>a+r.cust,0);
   const sem1Cust = REAL.reduce((a,r)=>a+r.cust,0);
 
-  return { rows, totInv, totCust, totAplic, totTrial, cac, mrr, payback, ltv, ltvCac, roi,
-           sem1Cust, sem2Cust, crApro, crTrial, crConv, precio, invSem2, aplicList, cpa };
+  return { rows, totInv, totCust, totAplic, totTrial, cac, mrr, mrrDic, mrrAcum, activosDic,
+           payback, ltv, ltvCac, roi, vidaMeses, churn,
+           sem1Cust, sem2Cust, crApro, crTrial, crConv, precio, invSem2, aplicList, cpa, mrrMensual };
 }
 
 // ─── RENDER ───────────────────────────────────────────────────
@@ -576,8 +624,8 @@ function update() {
   document.getElementById('kpi-cust-sub').textContent = `Sem1: ${fmtN(M.sem1Cust,0)} real · Sem2: ~${fmtN(M.sem2Cust,0)} proy`;
   document.getElementById('kpi-cac').textContent = fmtP(M.cac);
   document.getElementById('kpi-cac-sub').textContent = `Inversión total: ${fmtP(M.totInv)}`;
-  document.getElementById('kpi-mrr').textContent = fmtP(M.mrr);
-  document.getElementById('kpi-mrr-sub').textContent = `${fmtN(M.totCust,0)} × ${fmtP(M.precio)}/mes`;
+  document.getElementById('kpi-mrr').textContent = fmtP(M.mrrDic);
+  document.getElementById('kpi-mrr-sub').textContent = `${fmtN(M.activosDic,0)} activos en dic · Churn ${fmtN(M.churn*100,0)}%/mes`;
   document.getElementById('kpi-payback').textContent = fmtN(M.payback,1);
 
   // Funnel
@@ -639,7 +687,7 @@ function update() {
         <td>${r.backlogExtra>0?`<span style="color:var(--yellow);font-weight:600">+${fmtN(r.backlogExtra,0)}</span>`:'<span class="dim">—</span>'}</td>
         <td class="${isReal?'':'highlight'}" style="font-weight:700">${fmtN(r.cust,0)}</td>
         <td>${isFinite(cac)?fmtP(cac):'—'}</td>
-        <td>${fmtP(mrr)}</td>
+        <td>${fmtP(M.mrrMensual[i]?M.mrrMensual[i].mrr:0)}</td>
       </tr>`;
     }),
     `<tr class="total-row">
@@ -651,16 +699,18 @@ function update() {
       <td>—</td><td style="color:var(--yellow)">+${fmtN(BACKLOG,0)}</td>
       <td class="highlight">${fmtN(M.totCust,0)}</td>
       <td>${fmtP(M.cac)}</td>
-      <td>${fmtP(M.mrr)}</td>
+      <td>${fmtP(M.mrrAcum)}</td>
     </tr>`
   ].join('');
 
   // Metrics
   document.getElementById('met-inv').textContent = fmtP(M.totInv);
-  document.getElementById('met-roi').textContent = fmtN(M.roi,1)+'%';
+  document.getElementById('met-mrracum').textContent = fmtP(M.mrrAcum);
+  const roiColor = M.roi>=100?'var(--green)':M.roi>=60?'var(--yellow)':'var(--red)';
+  document.getElementById('met-roi').innerHTML = `<span style="color:${roiColor}">${fmtN(M.roi,1)}%</span>`;
   document.getElementById('met-ltv').textContent = fmtP(M.ltv);
-  document.getElementById('met-trials').textContent = fmtN(M.totTrial,0);
-  document.getElementById('met-aplic').textContent = fmtN(M.totAplic,0);
+  document.getElementById('met-ltv-sub').textContent = `Vida prom: ${fmtN(M.vidaMeses,1)} meses · Churn ${fmtN(M.churn*100,0)}%/mes`;
+  document.getElementById('met-activos').textContent = fmtN(M.activosDic,0);
   const ltvCacColor = M.ltvCac>=3?'var(--green)':M.ltvCac>=2?'var(--yellow)':'var(--red)';
   document.getElementById('met-ltvcac').innerHTML = `<span style="color:${ltvCacColor}">${fmtN(M.ltvCac,1)}x</span>`;
 
@@ -692,7 +742,7 @@ function update() {
   // Insights
   const insights = [];
   if (M.crTrial < 0.35) insights.push({icon:'⚠️', text:`El CR de activación de trial (${fmtPct(M.crTrial)}) está <strong>por debajo del histórico</strong>. Mejorarlo al 50% añadiría ~${fmtN(buildModelWith({crTrial:0.5}).totCust-M.totCust,0)} customers más.`});
-  if (M.ltvCac < 3) insights.push({icon:'📉', text:`El ratio LTV/CAC de <strong>${fmtN(M.ltvCac,1)}x</strong> está por debajo del benchmark saludable de 3x. Considera reducir el CAC o aumentar el precio.`});
+  if (M.ltvCac < 3) insights.push({icon:'📉', text:`El ratio LTV/CAC de <strong>${fmtN(M.ltvCac,1)}x</strong> está por debajo del benchmark saludable de 3x. Con churn de ${fmtN(M.churn*100,0)}%, el LTV real es ${fmtP(M.ltv)}.`});
   if (M.payback < 2) insights.push({icon:'🚀', text:`Payback period de <strong>${fmtN(M.payback,1)} meses</strong> — excelente eficiencia. El CAC se recupera muy rápido con el precio actual.`});
   if (M.sem2Cust > M.sem1Cust) insights.push({icon:'📈', text:`El semestre 2 proyecta <strong>${fmtN(M.sem2Cust,0)} customers</strong>, superando el sem1 real (${fmtN(M.sem1Cust,0)}). El momentum está acelerando.`});
   insights.push({icon:'🎯', text:`Con el escenario actual, <strong>julio tendrá un spike de ${fmtN(REAL[4].cust*M.crConv+REAL[5].trial*M.crConv+BACKLOG,0)} customers</strong> por el backlog de may+jun pendiente de convertir.`});
