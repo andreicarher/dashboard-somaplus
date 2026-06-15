@@ -152,6 +152,12 @@
   .sens-bar { height: 100%; border-radius: 4px; display: flex; align-items: center; padding-left: 8px; font-family: var(--mono); font-size: 10px; font-weight: 600; transition: width .4s; }
   .sens-val { min-width: 80px; text-align: right; font-family: var(--mono); font-size: 11px; }
 
+
+  .main-tab { padding:9px 18px; font-size:12px; font-weight:500; background:none; border:none; border-bottom:2px solid transparent; color:var(--text3); cursor:pointer; margin-bottom:-1px; transition:all .15s; }
+  .main-tab:hover { color:var(--text2); }
+  .main-tab.active { color:var(--text); border-bottom-color:var(--accent); }
+  .main-panel { display:none; }
+  .main-panel.active { display:block; }
   /* SCROLLBAR */
   ::-webkit-scrollbar { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -255,9 +261,18 @@
 <!-- MAIN -->
 <main class="main">
   <div class="page-header">
-    <div class="page-title">Proyecciones cierre 2026</div>
+    <div class="page-title">Proyecciones SOMA+ 2026</div>
     <div class="page-sub" id="scenario-desc">Base real Ene–Jun · Proyección Jul–Dic con tendencia Mar–May · Inversión $1.2M MXN</div>
   </div>
+
+  <!-- MAIN TABS -->
+  <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:28px">
+    <button class="main-tab active" id="mtab-anual" onclick="switchMainTab('anual')">📅 Cierre de año</button>
+    <button class="main-tab" id="mtab-mes" onclick="switchMainTab('mes')">📆 Cierre de mes</button>
+  </div>
+
+  <!-- ═══ TAB: CIERRE DE AÑO ═══ -->
+  <div id="panel-anual" class="main-panel active">
 
   <!-- KPI STRIP -->
   <div class="kpi-strip">
@@ -313,7 +328,9 @@
             <th>CR Apro</th>
             <th>Trials</th>
             <th>CR Trial</th>
-            <th>Customers</th>
+            <th>Cust. propios</th>
+            <th>+ Backlog</th>
+            <th>Total cust.</th>
             <th>CAC</th>
             <th>MRR nuevo</th>
           </tr>
@@ -371,6 +388,79 @@
     Modelo basado en tasas reales Mar–May 2026. Backlog de +98 customers (trials pendientes may+jun) incluido en julio.
     CAC y MRR calculados sobre inversión sem2 definida. Actualiza los sliders para explorar escenarios.
   </p>
+
+  </div><!-- /panel-anual -->
+
+  <!-- ═══ TAB: CIERRE DE MES ═══ -->
+  <div id="panel-mes" class="main-panel">
+
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:24px;max-width:560px">
+      <div class="input-group">
+        <div class="input-label" style="font-size:11px;color:var(--text2);margin-bottom:5px;display:flex;justify-content:space-between">Días transcurridos <span id="lbl-dias" style="color:var(--accent);font-family:var(--mono);font-size:11px"></span></div>
+        <div class="input-wrap"><input type="number" id="m-dias" value="15" min="1" max="31" step="1" oninput="updateMes()"><span class="input-suffix">días</span></div>
+      </div>
+      <div class="input-group">
+        <div class="input-label" style="font-size:11px;color:var(--text2);margin-bottom:5px">Inversión del mes</div>
+        <div class="input-wrap"><span class="input-prefix">$</span><input type="number" id="m-inv" value="100000" min="0" step="5000" oninput="updateMes()"><span class="input-suffix">MXN</span></div>
+      </div>
+      <div class="input-group">
+        <div class="input-label" style="font-size:11px;color:var(--text2);margin-bottom:5px">Aplicantes acumulados</div>
+        <div class="input-wrap"><input type="number" id="m-aplic" value="137" min="0" oninput="updateMes()"></div>
+      </div>
+      <div class="input-group">
+        <div class="input-label" style="font-size:11px;color:var(--text2);margin-bottom:5px">Aprobados acumulados</div>
+        <div class="input-wrap"><input type="number" id="m-apro" value="109" min="0" oninput="updateMes()"></div>
+      </div>
+      <div class="input-group">
+        <div class="input-label" style="font-size:11px;color:var(--text2);margin-bottom:5px">Trials activados</div>
+        <div class="input-wrap"><input type="number" id="m-trial" value="29" min="0" oninput="updateMes()"></div>
+      </div>
+      <div class="input-group">
+        <div class="input-label" style="font-size:11px;color:var(--text2);margin-bottom:5px">Customers acumulados</div>
+        <div class="input-wrap"><input type="number" id="m-cust" value="69" min="0" oninput="updateMes()"></div>
+      </div>
+      <div class="input-group">
+        <div class="input-label" style="font-size:11px;color:var(--text2);margin-bottom:5px">Trials pendientes (backlog)</div>
+        <div class="input-wrap"><input type="number" id="m-backlog" value="70" min="0" oninput="updateMes()"><span class="input-suffix">trials</span></div>
+      </div>
+      <div class="input-group">
+        <div class="input-label" style="font-size:11px;color:var(--text2);margin-bottom:5px">Días del mes</div>
+        <div class="input-wrap"><input type="number" id="m-diasmes" value="30" min="28" max="31" oninput="updateMes()"><span class="input-suffix">días</span></div>
+      </div>
+    </div>
+
+    <!-- KPIs mes -->
+    <div class="kpi-strip" style="margin-bottom:24px" id="mes-kpis"></div>
+
+    <!-- Tabla proyección mes -->
+    <div class="section-title">Proyección al cierre del mes</div>
+    <div class="table-wrap" style="margin-bottom:20px">
+      <table>
+        <thead>
+          <tr>
+            <th style="text-align:left">Métrica</th>
+            <th>Acumulado real</th>
+            <th>Ritmo / día</th>
+            <th>Proyección cierre</th>
+            <th>Prom. histórico</th>
+            <th>Mejor mes</th>
+            <th>Semáforo</th>
+          </tr>
+        </thead>
+        <tbody id="mes-table"></tbody>
+      </table>
+    </div>
+
+    <!-- Costos mes -->
+    <div class="section-title">Costos proyectados al cierre</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px" id="mes-costos"></div>
+
+    <p style="font-size:11px;color:var(--text3);line-height:1.7">
+      * Proyección = acumulado real ÷ días transcurridos × días del mes.<br>
+      * Customers incluye trials propios del mes × tasa de conversión + backlog pendiente × tasa de conversión.<br>
+      * Tasa de conversión trial→customer: 94.6% (cohortes maduras).
+    </p>
+  </div><!-- /panel-mes -->
 
 </main>
 </div>
@@ -442,15 +532,16 @@ function buildModel() {
   document.getElementById('lbl-cpa').textContent = fmtP(cpa);
   document.getElementById('lbl-aplic-derivado').textContent = fmtN(aplicDerived,0) + ' aplic/mes';
 
-  const rows = REAL.map(r=>({...r,tipo:'real'}));
+  const rows = REAL.map(r=>({...r,tipo:'real',custPropio:r.cust,backlogExtra:0}));
   for (let i=0;i<6;i++) {
     const m=i+7;
     const aplic=aplicList[i];
     const apro=Math.round(aplic*crApro);
     const trial=Math.round(apro*crTrial);
     const extra=i===0?BACKLOG:0;
-    const cust=trial*crConv+extra;
-    rows.push({m,mes:MESES[m-1],aplic,apro,trial,cust,inv:invSem2,tipo:'proy'});
+    const custPropio=trial*crConv;
+    const cust=custPropio+extra;
+    rows.push({m,mes:MESES[m-1],aplic,apro,trial,cust,custPropio,backlogExtra:extra,inv:invSem2,tipo:'proy'});
   }
 
   const totInv = INV_SEM1 + invSem2*6;
@@ -543,7 +634,9 @@ function update() {
         <td class="${clrCR(crApro)}">${fmtPct(crApro)}</td>
         <td>${fmtN(r.trial)}</td>
         <td class="${clrCR(crTrial)}">${fmtPct(crTrial)}</td>
-        <td class="${isReal?'':'highlight'}">${fmtN(r.cust,0)}</td>
+        <td class="${isReal?'dim':''}">${fmtN(r.custPropio,0)}</td>
+        <td>${r.backlogExtra>0?`<span style="color:var(--yellow);font-weight:600">+${fmtN(r.backlogExtra,0)}</span>`:'<span class="dim">—</span>'}</td>
+        <td class="${isReal?'':'highlight'}" style="font-weight:700">${fmtN(r.cust,0)}</td>
         <td>${isFinite(cac)?fmtP(cac):'—'}</td>
         <td>${fmtP(mrr)}</td>
       </tr>`;
@@ -554,6 +647,7 @@ function update() {
       <td>${fmtN(M.totAplic)}</td>
       <td>—</td><td>—</td>
       <td>${fmtN(M.totTrial,0)}</td><td>—</td>
+      <td>—</td><td style="color:var(--yellow)">+${fmtN(BACKLOG,0)}</td>
       <td class="highlight">${fmtN(M.totCust,0)}</td>
       <td>${fmtP(M.cac)}</td>
       <td>${fmtP(M.mrr)}</td>
@@ -626,8 +720,100 @@ function buildModelWith(overrides={}) {
   return {totCust, totInv, cac:totInv/totCust};
 }
 
+// ─── MAIN TAB SWITCH ──────────────────────────────────────────
+function switchMainTab(tab) {
+  document.querySelectorAll('.main-tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.main-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('mtab-'+tab).classList.add('active');
+  document.getElementById('panel-'+tab).classList.add('active');
+  if(tab==='mes') updateMes();
+}
+
+// ─── PROYECCIÓN MENSUAL ───────────────────────────────────────
+const HIST_AVG = { aplic:302.7, apro:183.7, trial:74.7, cust:53 };
+const HIST_BEST = { aplic:474, apro:291, trial:165, cust:133 };
+const TC = 0.946;
+
+function updateMes() {
+  const dias     = Math.max(1, Number(document.getElementById('m-dias').value));
+  const diasMes  = Number(document.getElementById('m-diasmes').value) || 30;
+  const inv      = Number(document.getElementById('m-inv').value);
+  const rAplic   = Number(document.getElementById('m-aplic').value);
+  const rApro    = Number(document.getElementById('m-apro').value);
+  const rTrial   = Number(document.getElementById('m-trial').value);
+  const rCust    = Number(document.getElementById('m-cust').value);
+  const backlog  = Number(document.getElementById('m-backlog').value);
+
+  document.getElementById('lbl-dias').textContent = `Día ${dias} de ${diasMes}`;
+
+  const pAplic  = (rAplic/dias)*diasMes;
+  const pApro   = (rApro/dias)*diasMes;
+  const pTrial  = (rTrial/dias)*diasMes;
+  const pCustProp = pTrial*TC;
+  const pCustBack = backlog*TC;
+  const pCust   = pCustProp+pCustBack;
+  const cac     = inv/pCust;
+  const cAplic  = inv/pAplic;
+  const cTrial  = inv/pTrial;
+
+  // semaforo: 🟢 >= meta_alta, 🟡 >= meta, 🔴 below
+  function sem(val, avg, best) {
+    if(!isFinite(val)) return '<span style="color:var(--text3)">—</span>';
+    if(val>=best*0.8) return '<span style="background:#1D9E7533;color:var(--green);padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500">🟢 Excelente</span>';
+    if(val>=avg*0.9)  return '<span style="background:#F0A84233;color:var(--yellow);padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500">🟡 En ritmo</span>';
+    return '<span style="background:#E0525233;color:var(--red);padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500">🔴 Por debajo</span>';
+  }
+
+  // KPIs mes
+  document.getElementById('mes-kpis').innerHTML = `
+    <div class="kpi-card green"><div class="kpi-label">Customers proyectados</div><div class="kpi-value" style="font-size:28px">${fmtN(pCust,0)}</div><div class="kpi-sub">Propios: ${fmtN(pCustProp,0)} · Backlog: ${fmtN(pCustBack,0)}</div></div>
+    <div class="kpi-card yellow"><div class="kpi-label">CAC proyectado</div><div class="kpi-value" style="font-size:28px">${fmtP(cac)}</div><div class="kpi-sub">Inv ${fmtP(inv)} ÷ ${fmtN(pCust,0)} cust</div></div>
+    <div class="kpi-card blue"><div class="kpi-label">Trials proyectados</div><div class="kpi-value" style="font-size:28px">${fmtN(pTrial,0)}</div><div class="kpi-sub">Ritmo: ${fmtN(rTrial/dias,1)}/día</div></div>
+    <div class="kpi-card purple"><div class="kpi-label">Aplicantes proyectados</div><div class="kpi-value" style="font-size:28px">${fmtN(pAplic,0)}</div><div class="kpi-sub">Ritmo: ${fmtN(rAplic/dias,1)}/día</div></div>`;
+
+  // Tabla mes
+  const rows = [
+    {label:'Aplicantes',  real:rAplic,  ritmo:rAplic/dias,  proy:pAplic,  avg:HIST_AVG.aplic,  best:HIST_BEST.aplic,  curr:false},
+    {label:'Aprobados',   real:rApro,   ritmo:rApro/dias,   proy:pApro,   avg:HIST_AVG.apro,   best:HIST_BEST.apro,   curr:false},
+    {label:'Trials',      real:rTrial,  ritmo:rTrial/dias,  proy:pTrial,  avg:HIST_AVG.trial,  best:HIST_BEST.trial,  curr:false},
+    {label:'Customers',   real:rCust,   ritmo:rCust/dias,   proy:pCust,   avg:HIST_AVG.cust,   best:HIST_BEST.cust,   curr:false},
+    {label:'Costo/Aplic', real:null,    ritmo:null,         proy:cAplic,  avg:303,             best:228,              curr:true},
+    {label:'Costo/Trial', real:null,    ritmo:null,         proy:cTrial,  avg:1304,            best:664,              curr:true},
+    {label:'CAC',         real:null,    ritmo:null,         proy:cac,     avg:1592,            best:824,              curr:true},
+  ];
+
+  document.getElementById('mes-table').innerHTML = rows.map(r=>{
+    const diffPct = r.avg ? ((r.proy-r.avg)/r.avg*100) : null;
+    const better = r.curr ? r.proy<r.avg : r.proy>r.avg;
+    const diffColor = better?'var(--green)':Math.abs(diffPct)>10?'var(--red)':'var(--yellow)';
+    return `<tr style="border-bottom:.5px solid var(--border2)">
+      <td style="text-align:left;font-weight:500;padding:9px 12px;font-family:'Inter',sans-serif">${r.label}</td>
+      <td style="padding:9px 12px;font-family:var(--mono);font-size:12px">${r.real!==null?fmtN(r.real,0):'—'}</td>
+      <td style="padding:9px 12px;font-family:var(--mono);font-size:12px">${r.ritmo!==null?fmtN(r.ritmo,1):'—'}</td>
+      <td style="padding:9px 12px;font-family:var(--mono);font-size:12px;font-weight:700;color:var(--accent)">${r.curr?fmtP(r.proy):fmtN(r.proy,0)}</td>
+      <td style="padding:9px 12px;font-family:var(--mono);font-size:12px;color:var(--text3)">${r.curr?fmtP(r.avg):fmtN(r.avg,0)}</td>
+      <td style="padding:9px 12px;font-family:var(--mono);font-size:12px;color:var(--text3)">${r.curr?fmtP(r.best):fmtN(r.best,0)}</td>
+      <td style="padding:9px 12px">${sem(r.proy, r.avg, r.best)}</td>
+    </tr>`;
+  }).join('');
+
+  // Costos mes
+  document.getElementById('mes-costos').innerHTML = [
+    {label:'Costo / Aplicante', val:cAplic, best:228},
+    {label:'Costo / Trial',     val:cTrial, best:664},
+    {label:'CAC',               val:cac,    best:824},
+    {label:'MRR proyectado',    val:pCust*Number(document.getElementById('inp-precio').value), best:null, isMrr:true},
+  ].map(c=>`
+    <div class="metric-box">
+      <div class="metric-box-label">${c.label}</div>
+      <div class="metric-box-val" style="color:${c.isMrr?'var(--green)':isFinite(c.val)&&c.best&&c.val<=c.best*1.2?'var(--green)':'var(--text)'}">${fmtP(c.val)}</div>
+      ${c.best?`<div class="metric-box-sub">Mejor histórico: ${fmtP(c.best)}</div>`:''}
+    </div>`).join('');
+}
+
 // Init
 update();
+updateMes();
 </script>
 </body>
 </html>
