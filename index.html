@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOMA+ · Modelo de Proyecciones 2026</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0C0C0E;
+    --bg2:       #131316;
+    --bg3:       #1A1A1F;
+    --border:    #2A2A32;
+    --border2:   #222228;
+    --text:      #F0EFE8;
+    --text2:     #9B9AA3;
+    --text3:     #5C5B66;
+    --accent:    #7B6EF6;
+    --accent2:   #5045CC;
+    --green:     #2ECC8F;
+    --green2:    #1A7A55;
+    --yellow:    #F0A842;
+    --red:       #E05252;
+    --blue:      #5B9CF6;
+    --mono:      'DM Mono', monospace;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+
+  /* LAYOUT */
+  .shell { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+  .sidebar { background: var(--bg2); border-right: 1px solid var(--border); padding: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; display: flex; flex-direction: column; }
+  .main { padding: 40px 48px; overflow-y: auto; }
+
+  /* SIDEBAR */
+  .sidebar-header { padding: 28px 24px 20px; border-bottom: 1px solid var(--border2); }
+  .logo { font-size: 13px; font-weight: 700; letter-spacing: .12em; color: var(--accent); text-transform: uppercase; }
+  .logo-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
+
+  .sidebar-section { padding: 16px 24px 8px; }
+  .sidebar-label { font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text3); margin-bottom: 12px; }
+
+  .input-group { margin-bottom: 14px; }
+  .input-label { font-size: 11px; color: var(--text2); margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; }
+  .input-label span { font-family: var(--mono); font-size: 11px; color: var(--accent); }
+  .input-wrap { display: flex; align-items: center; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; transition: border-color .15s; }
+  .input-wrap:focus-within { border-color: var(--accent); }
+  .input-prefix, .input-suffix { font-size: 11px; color: var(--text3); padding: 0 8px; font-family: var(--mono); white-space: nowrap; }
+  .input-wrap input[type="number"] { flex: 1; background: transparent; border: none; outline: none; color: var(--text); font-family: var(--mono); font-size: 13px; font-weight: 500; padding: 8px 4px; text-align: right; width: 0; }
+  input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer; }
+
+  .scenario-btns { display: flex; flex-direction: column; gap: 6px; padding: 0 24px 16px; }
+  .sc-btn { padding: 9px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg3); color: var(--text2); font-size: 12px; font-weight: 500; cursor: pointer; text-align: left; transition: all .15s; display: flex; justify-content: space-between; align-items: center; }
+  .sc-btn:hover { border-color: var(--accent); color: var(--text); }
+  .sc-btn.active { border-color: var(--accent); background: #7B6EF618; color: var(--text); }
+  .sc-btn .sc-tag { font-size: 10px; font-family: var(--mono); color: var(--text3); }
+  .sc-btn.active .sc-tag { color: var(--accent); }
+
+  .reset-btn { margin: 8px 24px 20px; padding: 8px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--text3); font-size: 11px; cursor: pointer; transition: all .15s; }
+  .reset-btn:hover { border-color: var(--red); color: var(--red); }
+
+  /* MAIN */
+  .page-header { margin-bottom: 36px; }
+  .page-title { font-size: 26px; font-weight: 700; color: var(--text); letter-spacing: -.02em; }
+  .page-sub { font-size: 13px; color: var(--text3); margin-top: 6px; }
+
+  /* KPI STRIP */
+  .kpi-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 36px; }
+  .kpi-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; position: relative; overflow: hidden; }
+  .kpi-card::before { content: ''; position: absolute; inset: 0; opacity: .04; }
+  .kpi-card.green::before { background: var(--green); }
+  .kpi-card.yellow::before { background: var(--yellow); }
+  .kpi-card.blue::before { background: var(--blue); }
+  .kpi-card.purple::before { background: var(--accent); }
+  .kpi-label { font-size: 11px; color: var(--text3); font-weight: 500; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
+  .kpi-value { font-size: 32px; font-weight: 700; line-height: 1; font-family: var(--mono); }
+  .kpi-card.green .kpi-value { color: var(--green); }
+  .kpi-card.yellow .kpi-value { color: var(--yellow); }
+  .kpi-card.blue .kpi-value { color: var(--blue); }
+  .kpi-card.purple .kpi-value { color: var(--accent); }
+  .kpi-sub { font-size: 11px; color: var(--text3); margin-top: 6px; }
+
+  /* FUNNEL VISUAL */
+  .funnel-section { margin-bottom: 36px; }
+  .section-title { font-size: 13px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 16px; }
+  .funnel-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .funnel-name { font-size: 12px; color: var(--text2); min-width: 90px; font-weight: 500; }
+  .funnel-bar-outer { flex: 1; background: var(--bg3); border-radius: 6px; height: 32px; overflow: hidden; border: 1px solid var(--border2); }
+  .funnel-bar-inner { height: 100%; border-radius: 5px; display: flex; align-items: center; padding-left: 12px; font-family: var(--mono); font-size: 12px; font-weight: 600; white-space: nowrap; transition: width .5s cubic-bezier(.4,0,.2,1); }
+  .funnel-cr { font-size: 11px; font-family: var(--mono); min-width: 48px; text-align: right; }
+
+  /* MONTHLY TABLE */
+  .table-section { margin-bottom: 36px; }
+  .table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th { background: var(--bg3); padding: 10px 14px; text-align: center; font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text3); border-bottom: 1px solid var(--border); white-space: nowrap; }
+  thead th:first-child { text-align: left; }
+  tbody tr { border-bottom: 1px solid var(--border2); transition: background .1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover td { background: var(--bg3); }
+  tbody tr.real-row td { background: transparent; }
+  tbody tr.proj-row td { background: #7B6EF605; }
+  tbody tr.total-row td { background: var(--bg3); border-top: 1px solid var(--border); font-weight: 600; }
+  td { padding: 10px 14px; text-align: center; font-family: var(--mono); font-size: 12px; }
+  td:first-child { text-align: left; font-family: 'Inter', sans-serif; font-weight: 500; font-size: 12px; }
+  .badge { display: inline-block; font-size: 9px; padding: 1px 5px; border-radius: 3px; margin-left: 5px; font-weight: 600; letter-spacing: .04em; vertical-align: middle; }
+  .badge-real { background: #2ECC8F18; color: var(--green); border: 1px solid var(--green2); }
+  .badge-proy { background: #7B6EF618; color: var(--accent); border: 1px solid var(--accent2); }
+  .highlight { color: var(--accent); font-weight: 700; }
+  .green-val { color: var(--green); }
+  .yellow-val { color: var(--yellow); }
+  .red-val { color: var(--red); }
+  .dim { color: var(--text3); }
+
+  /* CHART */
+  .chart-section { margin-bottom: 36px; }
+  .chart-bars { display: flex; align-items: flex-end; gap: 6px; height: 160px; padding: 0 4px; }
+  .chart-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; }
+  .chart-bar-wrap { flex: 1; width: 100%; display: flex; flex-direction: column; justify-content: flex-end; }
+  .chart-bar { width: 100%; border-radius: 4px 4px 0 0; min-height: 2px; transition: height .5s cubic-bezier(.4,0,.2,1); display: flex; align-items: flex-start; justify-content: center; padding-top: 4px; font-family: var(--mono); font-size: 9px; font-weight: 600; }
+  .chart-label { font-size: 10px; color: var(--text3); font-weight: 500; }
+  .chart-grid { position: relative; }
+
+  /* PAYBACK */
+  .metrics-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 36px; }
+  .metric-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
+  .metric-box-label { font-size: 11px; color: var(--text3); margin-bottom: 6px; }
+  .metric-box-val { font-size: 22px; font-weight: 700; font-family: var(--mono); color: var(--text); }
+  .metric-box-sub { font-size: 10px; color: var(--text3); margin-top: 4px; }
+
+  /* INSIGHT STRIP */
+  .insight-strip { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 36px; }
+  .insight-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .insight-icon { font-size: 16px; margin-bottom: 6px; }
+  .insight-text { font-size: 12px; color: var(--text2); line-height: 1.6; }
+  .insight-text strong { color: var(--text); }
+
+  /* SENSITIVITY */
+  .sensitivity { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 36px; }
+  .sens-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; font-size: 12px; }
+  .sens-label { min-width: 180px; color: var(--text2); }
+  .sens-bar-wrap { flex: 1; background: var(--bg3); border-radius: 4px; height: 20px; overflow: hidden; }
+  .sens-bar { height: 100%; border-radius: 4px; display: flex; align-items: center; padding-left: 8px; font-family: var(--mono); font-size: 10px; font-weight: 600; transition: width .4s; }
+  .sens-val { min-width: 80px; text-align: right; font-family: var(--mono); font-size: 11px; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* RESPONSIVE */
+  @media (max-width: 900px) {
+    .shell { grid-template-columns: 1fr; }
+    .sidebar { position: static; height: auto; }
+    .main { padding: 24px 20px; }
+    .kpi-strip { grid-template-columns: repeat(2,1fr); }
+    .metrics-grid { grid-template-columns: repeat(2,1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <div class="logo">SOMA+</div>
+    <div class="logo-sub">Modelo de Proyecciones 2026</div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Escenario</div>
+    <div class="scenario-btns">
+      <button class="sc-btn" id="btn-conservador" onclick="setScenario('conservador')">
+        Conservador <span class="sc-tag">384 aplic/mes</span>
+      </button>
+      <button class="sc-btn active" id="btn-base" onclick="setScenario('base')">
+        Base <span class="sc-tag">+5%/mes</span>
+      </button>
+      <button class="sc-btn" id="btn-optimista" onclick="setScenario('optimista')">
+        Optimista <span class="sc-tag">474 aplic/mes</span>
+      </button>
+      <button class="sc-btn" id="btn-custom" onclick="setScenario('custom')">
+        Personalizado <span class="sc-tag">manual</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Inversión</div>
+    <div class="input-group">
+      <div class="input-label">Inversión mensual sem2 <span id="lbl-inv"></span></div>
+      <div class="input-wrap">
+        <span class="input-prefix">$</span>
+        <input type="number" id="inp-inv" value="100000" min="10000" max="500000" step="5000" oninput="update()">
+        <span class="input-suffix">MXN</span>
+      </div>
+    </div>
+    <div class="input-group">
+      <div class="input-label">Precio membresía/mes <span id="lbl-precio"></span></div>
+      <div class="input-wrap">
+        <span class="input-prefix">$</span>
+        <input type="number" id="inp-precio" value="1500" min="500" max="5000" step="100" oninput="update()">
+        <span class="input-suffix">MXN</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Tasas de conversión</div>
+    <div class="input-group">
+      <div class="input-label">CR Aprobación <span id="lbl-cr-apro"></span></div>
+      <input type="range" id="inp-cr-apro" min="30" max="95" value="69" step="1" oninput="update()">
+    </div>
+    <div class="input-group">
+      <div class="input-label">CR Trial (apro→trial) <span id="lbl-cr-trial"></span></div>
+      <input type="range" id="inp-cr-trial" min="10" max="90" value="41" step="1" oninput="update()">
+    </div>
+    <div class="input-group">
+      <div class="input-label">CR Conversión (trial→member) <span id="lbl-cr-conv"></span></div>
+      <input type="range" id="inp-cr-conv" min="50" max="99" value="95" step="1" oninput="update()">
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Escenario personalizado</div>
+    <div class="input-group">
+      <div class="input-label">Aplicantes/mes (sem2) <span id="lbl-aplic-custom"></span></div>
+      <div class="input-wrap">
+        <input type="number" id="inp-aplic-custom" value="420" min="50" max="1000" step="10" oninput="update()">
+        <span class="input-suffix">aplic</span>
+      </div>
+    </div>
+  </div>
+
+  <button class="reset-btn" onclick="resetDefaults()">↺ Restaurar valores por defecto</button>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="page-header">
+    <div class="page-title">Proyecciones cierre 2026</div>
+    <div class="page-sub" id="scenario-desc">Base real Ene–Jun · Proyección Jul–Dic con tendencia Mar–May · Inversión $1.2M MXN</div>
+  </div>
+
+  <!-- KPI STRIP -->
+  <div class="kpi-strip">
+    <div class="kpi-card green">
+      <div class="kpi-label">Customers al cierre</div>
+      <div class="kpi-value" id="kpi-cust">—</div>
+      <div class="kpi-sub" id="kpi-cust-sub">—</div>
+    </div>
+    <div class="kpi-card yellow">
+      <div class="kpi-label">CAC proyectado</div>
+      <div class="kpi-value" id="kpi-cac">—</div>
+      <div class="kpi-sub" id="kpi-cac-sub">—</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-label">MRR al cierre</div>
+      <div class="kpi-value" id="kpi-mrr">—</div>
+      <div class="kpi-sub" id="kpi-mrr-sub">—</div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="kpi-label">Payback period</div>
+      <div class="kpi-value" id="kpi-payback">—</div>
+      <div class="kpi-sub">meses para recuperar CAC</div>
+    </div>
+  </div>
+
+  <!-- FUNNEL -->
+  <div class="funnel-section">
+    <div class="section-title">Embudo mensual proyectado (sem2 promedio)</div>
+    <div id="funnel-rows"></div>
+  </div>
+
+  <!-- CHART -->
+  <div class="chart-section">
+    <div class="section-title">Customers nuevos por mes</div>
+    <div class="chart-bars" id="chart-bars"></div>
+    <div style="display:flex;gap:16px;margin-top:8px;font-size:11px;color:var(--text3)">
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;background:#5B9CF6;border-radius:2px;display:inline-block"></span>Datos reales</span>
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;background:var(--accent);border-radius:2px;display:inline-block"></span>Proyección</span>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-section">
+    <div class="section-title">Tabla mensual detallada</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Mes</th>
+            <th>Inversión</th>
+            <th>Aplicantes</th>
+            <th>Aprobados</th>
+            <th>CR Apro</th>
+            <th>Trials</th>
+            <th>CR Trial</th>
+            <th>Customers</th>
+            <th>CAC</th>
+            <th>MRR nuevo</th>
+          </tr>
+        </thead>
+        <tbody id="main-table"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- METRICS -->
+  <div class="metrics-grid">
+    <div class="metric-box">
+      <div class="metric-box-label">Inversión total año</div>
+      <div class="metric-box-val" id="met-inv">—</div>
+      <div class="metric-box-sub">Sem1 real + Sem2 presupuesto</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-box-label">ROI (MRR / Inversión)</div>
+      <div class="metric-box-val" id="met-roi">—</div>
+      <div class="metric-box-sub">MRR anual acumulado vs. inversión total</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-box-label">LTV estimado (12 meses)</div>
+      <div class="metric-box-val" id="met-ltv">—</div>
+      <div class="metric-box-sub">Precio/mes × 12 meses por customer</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-box-label">Trials proyectados año</div>
+      <div class="metric-box-val" id="met-trials">—</div>
+      <div class="metric-box-sub">Incluye backlog may+jun (+98)</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-box-label">Aplicantes proyectados año</div>
+      <div class="metric-box-val" id="met-aplic">—</div>
+      <div class="metric-box-sub">Acumulado 12 meses</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-box-label">LTV / CAC ratio</div>
+      <div class="metric-box-val" id="met-ltvcac">—</div>
+      <div class="metric-box-sub">Objetivo saludable: &gt; 3x</div>
+    </div>
+  </div>
+
+  <!-- SENSITIVITY -->
+  <div class="sensitivity">
+    <div class="section-title" style="margin-bottom:16px">Análisis de sensibilidad — impacto en customers al cierre</div>
+    <div id="sensitivity-rows"></div>
+    <p style="font-size:11px;color:var(--text3);margin-top:12px">* Cada barra muestra cuántos customers adicionales generaría mejorar esa métrica un 10%, manteniendo el resto igual.</p>
+  </div>
+
+  <!-- INSIGHTS -->
+  <div class="insight-strip" id="insight-strip"></div>
+
+  <p style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.7">
+    Modelo basado en tasas reales Mar–May 2026. Backlog de +98 customers (trials pendientes may+jun) incluido en julio.
+    CAC y MRR calculados sobre inversión sem2 definida. Actualiza los sliders para explorar escenarios.
+  </p>
+
+</main>
+</div>
+
+<script>
+// ─── DATOS REALES ──────────────────────────────────────────────
+const REAL = [
+  {m:1,mes:'Ene',aplic:160, apro:36,  trial:2,   cust:1,   inv:20429.68},
+  {m:2,mes:'Feb',aplic:202, apro:96,  trial:23,  cust:10,  inv:101906.75},
+  {m:3,mes:'Mar',aplic:342, apro:253, trial:60,  cust:21,  inv:117863.35},
+  {m:4,mes:'Abr',aplic:335, apro:248, trial:99,  cust:85,  inv:113139.46},
+  {m:5,mes:'May',aplic:474, apro:291, trial:165, cust:133, inv:109595.62},
+  {m:6,mes:'Jun',aplic:137, apro:109, trial:29,  cust:69,  inv:100000},
+];
+const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const BACKLOG = 98;
+const INV_SEM1 = REAL.reduce((a,r)=>a+r.inv,0);
+
+// ─── ESCENARIOS ────────────────────────────────────────────────
+const SCENARIOS = {
+  conservador: { label:'Conservador', desc:'Promedio mensual Mar–May sostenido', aplic: ()=>Array(6).fill(384) },
+  base:        { label:'Base',        desc:'Crecimiento +5%/mes desde mayo',     aplic: ()=>Array.from({length:6},(_,i)=>Math.round(474*Math.pow(1.05,i))) },
+  optimista:   { label:'Optimista',   desc:'Mayo como benchmark sostenido',       aplic: ()=>Array(6).fill(474) },
+  custom:      { label:'Personalizado',desc:'Aplicantes definidos manualmente',   aplic: ()=>Array(6).fill(Number(document.getElementById('inp-aplic-custom').value)||420) },
+};
+
+let currentScenario = 'base';
+
+function setScenario(s) {
+  currentScenario = s;
+  document.querySelectorAll('.sc-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-'+s).classList.add('active');
+  update();
+}
+
+function resetDefaults() {
+  document.getElementById('inp-inv').value = 100000;
+  document.getElementById('inp-precio').value = 1500;
+  document.getElementById('inp-cr-apro').value = 69;
+  document.getElementById('inp-cr-trial').value = 41;
+  document.getElementById('inp-cr-conv').value = 95;
+  document.getElementById('inp-aplic-custom').value = 420;
+  setScenario('base');
+}
+
+// ─── FORMATO ──────────────────────────────────────────────────
+const fmtN = (n,d=0) => isFinite(n)&&!isNaN(n) ? n.toLocaleString('es-MX',{maximumFractionDigits:d,minimumFractionDigits:d}) : '—';
+const fmtP = (n) => '$'+fmtN(n,0);
+const fmtPct = (v) => fmtN(v*100,1)+'%';
+const clrCR = (v) => v>=0.6?'green-val':v>=0.4?'yellow-val':'red-val';
+
+// ─── BUILD MODEL ──────────────────────────────────────────────
+function buildModel() {
+  const invSem2 = Number(document.getElementById('inp-inv').value);
+  const precio  = Number(document.getElementById('inp-precio').value);
+  const crApro  = Number(document.getElementById('inp-cr-apro').value)/100;
+  const crTrial = Number(document.getElementById('inp-cr-trial').value)/100;
+  const crConv  = Number(document.getElementById('inp-cr-conv').value)/100;
+  const aplicList = SCENARIOS[currentScenario].aplic();
+
+  // Update labels
+  document.getElementById('lbl-cr-apro').textContent = fmtN(crApro*100,0)+'%';
+  document.getElementById('lbl-cr-trial').textContent = fmtN(crTrial*100,0)+'%';
+  document.getElementById('lbl-cr-conv').textContent = fmtN(crConv*100,0)+'%';
+  document.getElementById('lbl-inv').textContent = fmtP(invSem2);
+  document.getElementById('lbl-precio').textContent = fmtP(precio);
+  document.getElementById('lbl-aplic-custom').textContent = fmtN(aplicList[0],0);
+
+  const rows = REAL.map(r=>({...r,tipo:'real'}));
+  for (let i=0;i<6;i++) {
+    const m=i+7;
+    const aplic=aplicList[i];
+    const apro=Math.round(aplic*crApro);
+    const trial=Math.round(apro*crTrial);
+    const extra=i===0?BACKLOG:0;
+    const cust=trial*crConv+extra;
+    rows.push({m,mes:MESES[m-1],aplic,apro,trial,cust,inv:invSem2,tipo:'proy'});
+  }
+
+  const totInv = INV_SEM1 + invSem2*6;
+  const totCust = rows.reduce((a,r)=>a+r.cust,0);
+  const totAplic = rows.reduce((a,r)=>a+r.aplic,0);
+  const totTrial = rows.reduce((a,r)=>a+r.trial,0);
+  const cac = totInv/totCust;
+  const mrr = totCust*precio;
+  const payback = cac/precio;
+  const ltv = precio*12;
+  const ltvCac = ltv/cac;
+  const roi = (mrr*12)/totInv*100;
+
+  const sem2Cust = rows.filter(r=>r.m>6).reduce((a,r)=>a+r.cust,0);
+  const sem1Cust = REAL.reduce((a,r)=>a+r.cust,0);
+
+  return { rows, totInv, totCust, totAplic, totTrial, cac, mrr, payback, ltv, ltvCac, roi,
+           sem1Cust, sem2Cust, crApro, crTrial, crConv, precio, invSem2, aplicList };
+}
+
+// ─── RENDER ───────────────────────────────────────────────────
+function update() {
+  const M = buildModel();
+
+  // Scenario desc
+  document.getElementById('scenario-desc').textContent =
+    `${SCENARIOS[currentScenario].label}: ${SCENARIOS[currentScenario].desc} · CR aprobación ${fmtN(M.crApro*100,0)}% · CR trial ${fmtN(M.crTrial*100,0)}% · Conv ${fmtN(M.crConv*100,0)}%`;
+
+  // KPIs
+  document.getElementById('kpi-cust').textContent = fmtN(M.totCust,0);
+  document.getElementById('kpi-cust-sub').textContent = `Sem1: ${fmtN(M.sem1Cust,0)} real · Sem2: ~${fmtN(M.sem2Cust,0)} proy`;
+  document.getElementById('kpi-cac').textContent = fmtP(M.cac);
+  document.getElementById('kpi-cac-sub').textContent = `Inversión total: ${fmtP(M.totInv)}`;
+  document.getElementById('kpi-mrr').textContent = fmtP(M.mrr);
+  document.getElementById('kpi-mrr-sub').textContent = `${fmtN(M.totCust,0)} × ${fmtP(M.precio)}/mes`;
+  document.getElementById('kpi-payback').textContent = fmtN(M.payback,1);
+
+  // Funnel
+  const avgSem2 = M.rows.filter(r=>r.m>6);
+  const avgAplic = avgSem2.reduce((a,r)=>a+r.aplic,0)/6;
+  const avgApro  = avgSem2.reduce((a,r)=>a+r.apro,0)/6;
+  const avgTrial = avgSem2.reduce((a,r)=>a+r.trial,0)/6;
+  const avgCust  = avgSem2.reduce((a,r)=>a+r.cust,0)/6;
+  const funnelData = [
+    {name:'Aplicantes', val:avgAplic, color:'#5B9CF6', cr:null},
+    {name:'Aprobados',  val:avgApro,  color:'#7B6EF6', cr:M.crApro},
+    {name:'Trials',     val:avgTrial, color:'#2ECC8F', cr:M.crTrial},
+    {name:'Customers',  val:avgCust,  color:'#F0A842', cr:M.crConv},
+  ];
+  document.getElementById('funnel-rows').innerHTML = funnelData.map(f=>`
+    <div class="funnel-row">
+      <span class="funnel-name">${f.name}</span>
+      <div class="funnel-bar-outer">
+        <div class="funnel-bar-inner" style="width:${Math.min(100,f.val/avgAplic*100)}%;background:${f.color}18;border:1px solid ${f.color}44;color:${f.color}">
+          ${fmtN(f.val,0)}/mes
+        </div>
+      </div>
+      <span class="funnel-cr" style="color:${f.cr?f.cr>=0.6?'var(--green)':f.cr>=0.35?'var(--yellow)':'var(--red)':'var(--text3)'}">${f.cr?fmtPct(f.cr):'base'}</span>
+    </div>`).join('');
+
+  // Chart
+  const maxCust = Math.max(...M.rows.map(r=>r.cust));
+  document.getElementById('chart-bars').innerHTML = M.rows.map(r=>{
+    const h = Math.max(2, Math.round((r.cust/maxCust)*140));
+    const color = r.tipo==='real'?'#5B9CF6':'var(--accent)';
+    const textColor = r.tipo==='real'?'#5B9CF6':'#B8B0FF';
+    return `<div class="chart-col">
+      <div class="chart-bar-wrap">
+        <div class="chart-bar" style="height:${h}px;background:${color}22;border:1px solid ${color}55;color:${textColor}">
+          ${r.cust>=15?fmtN(r.cust,0):''}
+        </div>
+      </div>
+      <span class="chart-label">${r.mes}</span>
+    </div>`;
+  }).join('');
+
+  // Table
+  document.getElementById('main-table').innerHTML = [
+    ...M.rows.map((r,i)=>{
+      const cac = r.inv/r.cust;
+      const mrr = r.cust*M.precio;
+      const crApro = r.apro/r.aplic;
+      const crTrial = r.trial/r.apro;
+      const isReal = r.tipo==='real';
+      return `<tr class="${isReal?'real-row':'proj-row'}">
+        <td>${r.mes} <span class="badge ${isReal?'badge-real':'badge-proy'}">${isReal?'REAL':'PROY'}</span></td>
+        <td class="dim">${fmtP(r.inv)}</td>
+        <td>${fmtN(r.aplic)}</td>
+        <td>${fmtN(r.apro)}</td>
+        <td class="${clrCR(crApro)}">${fmtPct(crApro)}</td>
+        <td>${fmtN(r.trial)}</td>
+        <td class="${clrCR(crTrial)}">${fmtPct(crTrial)}</td>
+        <td class="${isReal?'':'highlight'}">${fmtN(r.cust,0)}</td>
+        <td>${isFinite(cac)?fmtP(cac):'—'}</td>
+        <td>${fmtP(mrr)}</td>
+      </tr>`;
+    }),
+    `<tr class="total-row">
+      <td>TOTAL AÑO</td>
+      <td class="dim">${fmtP(M.totInv)}</td>
+      <td>${fmtN(M.totAplic)}</td>
+      <td>—</td><td>—</td>
+      <td>${fmtN(M.totTrial,0)}</td><td>—</td>
+      <td class="highlight">${fmtN(M.totCust,0)}</td>
+      <td>${fmtP(M.cac)}</td>
+      <td>${fmtP(M.mrr)}</td>
+    </tr>`
+  ].join('');
+
+  // Metrics
+  document.getElementById('met-inv').textContent = fmtP(M.totInv);
+  document.getElementById('met-roi').textContent = fmtN(M.roi,1)+'%';
+  document.getElementById('met-ltv').textContent = fmtP(M.ltv);
+  document.getElementById('met-trials').textContent = fmtN(M.totTrial,0);
+  document.getElementById('met-aplic').textContent = fmtN(M.totAplic,0);
+  const ltvCacColor = M.ltvCac>=3?'var(--green)':M.ltvCac>=2?'var(--yellow)':'var(--red)';
+  document.getElementById('met-ltvcac').innerHTML = `<span style="color:${ltvCacColor}">${fmtN(M.ltvCac,1)}x</span>`;
+
+  // Sensitivity: +10% en cada variable
+  const sensItems = [
+    { label:'Inversión +10%',   fn:()=>{ const m2=buildModelWith({invSem2:M.invSem2*1.1}); return m2.totCust-M.totCust; }},
+    { label:'Aplicantes +10%',  fn:()=>{ const m2=buildModelWith({aplicMult:1.1}); return m2.totCust-M.totCust; }},
+    { label:'CR Aprobación +10pts', fn:()=>{ const m2=buildModelWith({crApro:Math.min(0.99,M.crApro+0.1)}); return m2.totCust-M.totCust; }},
+    { label:'CR Trial +10pts',  fn:()=>{ const m2=buildModelWith({crTrial:Math.min(0.99,M.crTrial+0.1)}); return m2.totCust-M.totCust; }},
+    { label:'CR Conversión +5pts', fn:()=>{ const m2=buildModelWith({crConv:Math.min(0.99,M.crConv+0.05)}); return m2.totCust-M.totCust; }},
+  ];
+  const sensVals = sensItems.map(s=>s.fn());
+  const maxSens = Math.max(...sensVals);
+  document.getElementById('sensitivity-rows').innerHTML = sensItems.map((s,i)=>{
+    const v=sensVals[i];
+    const w=Math.max(2,Math.round(v/maxSens*100));
+    const color=i<=1?'var(--blue)':i<=3?'var(--green)':'var(--accent)';
+    return `<div class="sens-row">
+      <span class="sens-label">${s.label}</span>
+      <div class="sens-bar-wrap">
+        <div class="sens-bar" style="width:${w}%;background:${color}22;border:1px solid ${color}55;color:${color}">
+          ${v>=10?'+'+fmtN(v,0)+' cust':''}
+        </div>
+      </div>
+      <span class="sens-val" style="color:${color}">+${fmtN(v,0)}</span>
+    </div>`;
+  }).join('');
+
+  // Insights
+  const insights = [];
+  if (M.crTrial < 0.35) insights.push({icon:'⚠️', text:`El CR de activación de trial (${fmtPct(M.crTrial)}) está <strong>por debajo del histórico</strong>. Mejorarlo al 50% añadiría ~${fmtN(buildModelWith({crTrial:0.5}).totCust-M.totCust,0)} customers más.`});
+  if (M.ltvCac < 3) insights.push({icon:'📉', text:`El ratio LTV/CAC de <strong>${fmtN(M.ltvCac,1)}x</strong> está por debajo del benchmark saludable de 3x. Considera reducir el CAC o aumentar el precio.`});
+  if (M.payback < 2) insights.push({icon:'🚀', text:`Payback period de <strong>${fmtN(M.payback,1)} meses</strong> — excelente eficiencia. El CAC se recupera muy rápido con el precio actual.`});
+  if (M.sem2Cust > M.sem1Cust) insights.push({icon:'📈', text:`El semestre 2 proyecta <strong>${fmtN(M.sem2Cust,0)} customers</strong>, superando el sem1 real (${fmtN(M.sem1Cust,0)}). El momentum está acelerando.`});
+  insights.push({icon:'🎯', text:`Con el escenario actual, <strong>julio tendrá un spike de ${fmtN(REAL[4].cust*M.crConv+REAL[5].trial*M.crConv+BACKLOG,0)} customers</strong> por el backlog de may+jun pendiente de convertir.`});
+  document.getElementById('insight-strip').innerHTML = insights.slice(0,4).map(i=>
+    `<div class="insight-card"><div class="insight-icon">${i.icon}</div><div class="insight-text">${i.text}</div></div>`
+  ).join('');
+}
+
+function buildModelWith(overrides={}) {
+  const invSem2 = overrides.invSem2 || Number(document.getElementById('inp-inv').value);
+  const crApro  = overrides.crApro  || Number(document.getElementById('inp-cr-apro').value)/100;
+  const crTrial = overrides.crTrial || Number(document.getElementById('inp-cr-trial').value)/100;
+  const crConv  = overrides.crConv  || Number(document.getElementById('inp-cr-conv').value)/100;
+  const precio  = Number(document.getElementById('inp-precio').value);
+  const aplicMult = overrides.aplicMult || 1;
+  const aplicList = SCENARIOS[currentScenario].aplic().map(v=>Math.round(v*aplicMult));
+
+  let totCust=REAL.reduce((a,r)=>a+r.cust,0);
+  for(let i=0;i<6;i++){
+    const aplic=aplicList[i]; const apro=Math.round(aplic*crApro);
+    const trial=Math.round(apro*crTrial); const extra=i===0?BACKLOG:0;
+    totCust+=trial*crConv+extra;
+  }
+  const totInv=INV_SEM1+invSem2*6;
+  return {totCust, totInv, cac:totInv/totCust};
+}
+
+// Init
+update();
+</script>
+</body>
+</html>
