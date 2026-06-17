@@ -240,19 +240,44 @@
 
   <div class="sidebar-section">
     <div class="sidebar-label">Retención</div>
+
     <div class="input-group">
-      <div class="input-label">Churn rate mensual <span id="lbl-churn"></span></div>
+      <div class="input-label" style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:10px;color:var(--text3)">💸 Churn pagadores (MRR)</span>
+        <span id="lbl-churn" style="font-family:var(--mono);font-size:11px;color:var(--accent)"></span>
+      </div>
       <input type="range" id="inp-churn" min="1" max="40" value="15" step="1" oninput="update()">
+      <div style="font-size:10px;color:var(--text3);margin-top:2px">Stripe oficial: 12–20% · Default: 15%</div>
     </div>
-    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;margin-top:4px">
-      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">
-        <span>LTV implícito</span><span>Meses activo promedio</span>
+
+    <div class="input-group" style="margin-top:10px">
+      <div class="input-label" style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:10px;color:var(--text3)">📋 Cancelación en trial</span>
+        <span id="lbl-trial-canc" style="font-family:var(--mono);font-size:11px;color:var(--yellow)"></span>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:baseline">
-        <div style="font-family:var(--mono);font-size:16px;font-weight:600;color:var(--green)" id="lbl-ltv-real">—</div>
-        <div style="font-family:var(--mono);font-size:14px;font-weight:500;color:var(--text2)" id="lbl-vida">—</div>
+      <input type="range" id="inp-trial-canc" min="5" max="90" value="30" step="1" oninput="update()">
+      <div style="font-size:10px;color:var(--text3);margin-top:2px">Real reciente (Abr–Jun): 30% · Default: 30%</div>
+    </div>
+
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;margin-top:8px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <div>
+          <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">LTV implícito</div>
+          <div style="font-family:var(--mono);font-size:14px;font-weight:600;color:var(--green)" id="lbl-ltv-real">—</div>
+        </div>
+        <div>
+          <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Vida prom. member</div>
+          <div style="font-family:var(--mono);font-size:14px;font-weight:500;color:var(--text2)" id="lbl-vida">—</div>
+        </div>
+        <div>
+          <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Trials que pagan</div>
+          <div style="font-family:var(--mono);font-size:14px;font-weight:500;color:var(--yellow)" id="lbl-pct-pagan">—</div>
+        </div>
+        <div>
+          <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Retención/mes</div>
+          <div style="font-family:var(--mono);font-size:14px;font-weight:500;color:var(--accent)" id="lbl-retencion">—</div>
+        </div>
       </div>
-      <div style="font-size:10px;color:var(--text3);margin-top:2px">= Precio / Churn rate</div>
     </div>
   </div>
 
@@ -403,7 +428,7 @@
   <div class="insight-strip" id="insight-strip"></div>
 
   <p style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.7">
-    Modelo basado en tasas reales Mar–May 2026 · Base corregida sin Subscribers. Backlog de ~100 customers (67 may + 38 jun × 95.1%) incluido en julio.
+    Modelo basado en tasas reales Mar–May 2026 · Base corregida sin Subscribers · Churn MRR (impacto suscripciones activas) separado de tasa cancelación en trial (no genera ingreso). Backlog ~100 customers en julio.
     CAC y MRR calculados sobre inversión sem2 definida. Actualiza los sliders para explorar escenarios.
   </p>
 
@@ -523,6 +548,7 @@ function resetDefaults() {
   document.getElementById('inp-cr-conv').value = 95;
   document.getElementById('inp-cpa').value = 383;
   document.getElementById('inp-churn').value = 15;
+  document.getElementById('inp-trial-canc').value = 30;
   setScenario('base');
 }
 
@@ -538,9 +564,10 @@ function buildModel() {
   const precio  = Number(document.getElementById('inp-precio').value);
   const crApro  = Number(document.getElementById('inp-cr-apro').value)/100;
   const crTrial = Number(document.getElementById('inp-cr-trial').value)/100;
-  const crConv  = Number(document.getElementById('inp-cr-conv').value)/100;
-  const cpa     = Math.max(1, Number(document.getElementById('inp-cpa').value));
-  const aplicList = SCENARIOS[currentScenario].aplic(invSem2, cpa);
+  const crConv       = Number(document.getElementById('inp-cr-conv').value)/100;
+  const cpa          = Math.max(1, Number(document.getElementById('inp-cpa').value));
+  const trialCancRate = Number(document.getElementById('inp-trial-canc').value)/100;
+  const aplicList    = SCENARIOS[currentScenario].aplic(invSem2, cpa);
   const aplicDerived = Math.round(invSem2 / cpa);
 
   // Update labels
@@ -553,19 +580,26 @@ function buildModel() {
   document.getElementById('lbl-aplic-derivado').textContent = fmtN(aplicDerived,0) + ' aplic/mes';
   const churnVal = Number(document.getElementById('inp-churn').value)/100;
   document.getElementById('lbl-churn').textContent = fmtN(churnVal*100,0)+'%';
+  document.getElementById('lbl-trial-canc').textContent = fmtN(trialCancRate*100,0)+'%';
   document.getElementById('lbl-ltv-real').textContent = fmtP(precio/churnVal);
   document.getElementById('lbl-vida').textContent = fmtN(1/churnVal,1)+' meses';
+  document.getElementById('lbl-pct-pagan').textContent = fmtN((1-trialCancRate)*100,1)+'%';
+  document.getElementById('lbl-retencion').textContent = fmtN((1-churnVal)*100,1)+'%';
 
   const rows = REAL.map(r=>({...r,tipo:'real',custPropio:r.cust,backlogExtra:0}));
   for (let i=0;i<6;i++) {
     const m=i+7;
     const aplic=aplicList[i];
     const apro=Math.round(aplic*crApro);
-    const trial=Math.round(apro*crTrial);
+    const trialIniciados=Math.round(apro*crTrial);
+    // Trials que llegan a pagar = los que NO cancelaron en periodo de prueba
+    const trialPagan=Math.round(trialIniciados*(1-trialCancRate));
     const extra=i===0?BACKLOG:0;
-    const custPropio=trial*crConv;
+    const custPropio=trialPagan*crConv;
     const cust=custPropio+extra;
-    rows.push({m,mes:MESES[m-1],aplic,apro,trial,cust,custPropio,backlogExtra:extra,inv:invSem2,tipo:'proy'});
+    rows.push({m,mes:MESES[m-1],aplic,apro,
+               trial:trialIniciados,trialPagan,
+               cust,custPropio,backlogExtra:extra,inv:invSem2,tipo:'proy'});
   }
 
   const totInv  = INV_SEM1 + invSem2*6;
@@ -607,7 +641,7 @@ function buildModel() {
   const sem1Cust = REAL.reduce((a,r)=>a+r.cust,0);
 
   return { rows, totInv, totCust, totAplic, totTrial, cac, mrr, mrrDic, mrrAcum, activosDic,
-           payback, ltv, ltvCac, roi, vidaMeses, churn,
+           payback, ltv, ltvCac, roi, vidaMeses, churn, trialCancRate,
            sem1Cust, sem2Cust, crApro, crTrial, crConv, precio, invSem2, aplicList, cpa, mrrMensual };
 }
 
@@ -617,7 +651,7 @@ function update() {
 
   // Scenario desc
   document.getElementById('scenario-desc').textContent =
-    `${SCENARIOS[currentScenario].label}: ${SCENARIOS[currentScenario].desc} · ${fmtN(M.aplicList[0],0)} aplic/mes · CPA ${fmtP(M.cpa)} · CR aprobación ${fmtN(M.crApro*100,0)}% · CR trial ${fmtN(M.crTrial*100,0)}%`;
+    `${SCENARIOS[currentScenario].label}: ${SCENARIOS[currentScenario].desc} · ${fmtN(M.aplicList[0],0)} aplic/mes · CPA ${fmtP(M.cpa)} · Canc. trial ${fmtN(M.trialCancRate*100,0)}% · Churn MRR ${fmtN(M.churn*100,0)}%`;
 
   // KPIs
   document.getElementById('kpi-cust').textContent = fmtN(M.totCust,0);
@@ -625,7 +659,7 @@ function update() {
   document.getElementById('kpi-cac').textContent = fmtP(M.cac);
   document.getElementById('kpi-cac-sub').textContent = `Inversión total: ${fmtP(M.totInv)}`;
   document.getElementById('kpi-mrr').textContent = fmtP(M.mrrDic);
-  document.getElementById('kpi-mrr-sub').textContent = `${fmtN(M.activosDic,0)} activos en dic · Churn ${fmtN(M.churn*100,0)}%/mes`;
+  document.getElementById('kpi-mrr-sub').textContent = `${fmtN(M.activosDic,0)} activos en dic · Churn MRR ${fmtN(M.churn*100,0)}% · Canc. trial ${fmtN(M.trialCancRate*100,0)}%`;
   document.getElementById('kpi-payback').textContent = fmtN(M.payback,1);
 
   // Funnel
@@ -634,11 +668,13 @@ function update() {
   const avgApro  = avgSem2.reduce((a,r)=>a+r.apro,0)/6;
   const avgTrial = avgSem2.reduce((a,r)=>a+r.trial,0)/6;
   const avgCust  = avgSem2.reduce((a,r)=>a+r.cust,0)/6;
+  const avgTrialPagan = avgSem2.reduce((a,r)=>a+(r.trialPagan||r.trial),0)/6;
   const funnelData = [
-    {name:'Aplicantes', val:avgAplic, color:'#5B9CF6', cr:null},
-    {name:'Aprobados',  val:avgApro,  color:'#7B6EF6', cr:M.crApro},
-    {name:'Trials',     val:avgTrial, color:'#2ECC8F', cr:M.crTrial},
-    {name:'Customers',  val:avgCust,  color:'#F0A842', cr:M.crConv},
+    {name:'Aplicantes',    val:avgAplic,      color:'#5B9CF6', cr:null},
+    {name:'Aprobados',     val:avgApro,       color:'#7B6EF6', cr:M.crApro},
+    {name:'Trials (inicio)',val:avgTrial,     color:'#2ECC8F', cr:M.crTrial},
+    {name:'Trials (pagan)',val:avgTrialPagan,  color:'#1D9E75', cr:(1-M.trialCancRate)},
+    {name:'Customers',     val:avgCust,       color:'#F0A842', cr:M.crConv},
   ];
   document.getElementById('funnel-rows').innerHTML = funnelData.map(f=>`
     <div class="funnel-row">
@@ -716,11 +752,12 @@ function update() {
 
   // Sensitivity: +10% en cada variable
   const sensItems = [
-    { label:'Inversión +10%',        fn:()=>{ const m2=buildModelWith({invSem2:M.invSem2*1.1}); return m2.totCust-M.totCust; }},
-    { label:'Costo/aplic -10%',      fn:()=>{ const m2=buildModelWith({cpa:M.cpa*0.9}); return m2.totCust-M.totCust; }},
-    { label:'CR Aprobación +10pts',  fn:()=>{ const m2=buildModelWith({crApro:Math.min(0.99,M.crApro+0.1)}); return m2.totCust-M.totCust; }},
-    { label:'CR Trial +10pts',       fn:()=>{ const m2=buildModelWith({crTrial:Math.min(0.99,M.crTrial+0.1)}); return m2.totCust-M.totCust; }},
-    { label:'CR Conversión +5pts',   fn:()=>{ const m2=buildModelWith({crConv:Math.min(0.99,M.crConv+0.05)}); return m2.totCust-M.totCust; }},
+    { label:'Inversión +10%',              fn:()=>{ const m2=buildModelWith({invSem2:M.invSem2*1.1}); return m2.totCust-M.totCust; }},
+    { label:'Costo/aplic -10%',            fn:()=>{ const m2=buildModelWith({cpa:M.cpa*0.9}); return m2.totCust-M.totCust; }},
+    { label:'CR Aprobación +10pts',        fn:()=>{ const m2=buildModelWith({crApro:Math.min(0.99,M.crApro+0.1)}); return m2.totCust-M.totCust; }},
+    { label:'CR Trial +10pts',             fn:()=>{ const m2=buildModelWith({crTrial:Math.min(0.99,M.crTrial+0.1)}); return m2.totCust-M.totCust; }},
+    { label:'Canc. trial -10pts',          fn:()=>{ const m2=buildModelWith({trialCancRate:Math.max(0.01,M.trialCancRate-0.1)}); return m2.totCust-M.totCust; }},
+    { label:'CR Conversión +5pts',         fn:()=>{ const m2=buildModelWith({crConv:Math.min(0.99,M.crConv+0.05)}); return m2.totCust-M.totCust; }},
   ];
   const sensVals = sensItems.map(s=>s.fn());
   const maxSens = Math.max(...sensVals);
@@ -758,14 +795,17 @@ function buildModelWith(overrides={}) {
   const crConv  = overrides.crConv  || Number(document.getElementById('inp-cr-conv').value)/100;
   const precio  = Number(document.getElementById('inp-precio').value);
   const cpa     = overrides.cpa || Math.max(1, Number(document.getElementById('inp-cpa').value));
+  const trialCancRate = overrides.trialCancRate || Number(document.getElementById('inp-trial-canc').value)/100;
   const aplicMult = overrides.aplicMult || 1;
   const aplicList = SCENARIOS[currentScenario].aplic(invSem2, cpa).map(v=>Math.round(v*aplicMult));
 
   let totCust=REAL.reduce((a,r)=>a+r.cust,0);
   for(let i=0;i<6;i++){
     const aplic=aplicList[i]; const apro=Math.round(aplic*crApro);
-    const trial=Math.round(apro*crTrial); const extra=i===0?BACKLOG:0;
-    totCust+=trial*crConv+extra;
+    const trialIni=Math.round(apro*crTrial);
+    const trialPagan=Math.round(trialIni*(1-trialCancRate));
+    const extra=i===0?BACKLOG:0;
+    totCust+=trialPagan*crConv+extra;
   }
   const totInv=INV_SEM1+invSem2*6;
   return {totCust, totInv, cac:totInv/totCust};
