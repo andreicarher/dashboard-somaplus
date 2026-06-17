@@ -375,7 +375,8 @@
             <th>+ Backlog</th>
             <th>Total cust.</th>
             <th>CAC</th>
-            <th>MRR activos<br><span style='font-weight:400;font-size:10px'>con churn</span></th>
+            <th>MRR del mes<br><span style='font-weight:400;font-size:10px'>Stripe real / proy</span></th>
+            <th>MRR acumulado<br><span style='font-weight:400;font-size:10px'>suma histórica</span></th>
           </tr>
         </thead>
         <tbody id="main-table"></tbody>
@@ -521,6 +522,8 @@ const REAL = [
 ];
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 const BACKLOG = Math.round((67 + 38) * 0.951); // pendientes may(67) + jun(38) × 95.1%
+// MRR real de Stripe por mes (snapshot al cierre de cada mes)
+const MRR_STRIPE = {1:443330, 2:458550, 3:507380, 4:531540, 5:589760, 6:612830};
 const INV_SEM1 = REAL.reduce((a,r)=>a+r.inv,0);
 
 // ─── ESCENARIOS ────────────────────────────────────────────────
@@ -614,15 +617,19 @@ function buildModel() {
   // y simulamos mes a mes: activos_prev × (1-churn) + nuevos_del_mes
   let activosMes = REAL.reduce((a,r)=>a+r.cust,0); // base real sem1 ≈ 322
   const mrrMensual = [];
+  // Para meses reales usamos el MRR de Stripe como base de la simulación
+  // Stripe reporta activos reales = MRR / precio_prom (904 MXN)
+  const PRECIO_STRIPE_PROM = 904;
   rows.forEach((r,i) => {
     if (r.tipo === 'real') {
-      // Meses reales: usamos customers reales sin aplicar churn (ya ocurrió)
-      activosMes = r.cust > 0 ? activosMes + r.cust : activosMes;
-      mrrMensual.push({ mes: r.mes, activos: activosMes, mrr: activosMes * precio });
+      // Meses reales: anclar al MRR de Stripe para que la proyección parta correcto
+      const mrrReal = MRR_STRIPE[r.m] || 0;
+      activosMes = mrrReal > 0 ? Math.round(mrrReal / PRECIO_STRIPE_PROM) : activosMes;
+      mrrMensual.push({ mes: r.mes, activos: activosMes, mrr: mrrReal });
     } else {
-      // Meses proyectados: aplicamos churn sobre base anterior + nuevos
+      // Meses proyectados: churn sobre base de Stripe (precio prom real)
       activosMes = Math.round(activosMes * (1 - churn) + r.cust);
-      mrrMensual.push({ mes: r.mes, activos: activosMes, mrr: activosMes * precio });
+      mrrMensual.push({ mes: r.mes, activos: activosMes, mrr: activosMes * PRECIO_STRIPE_PROM });
     }
   });
 
@@ -659,7 +666,7 @@ function update() {
   document.getElementById('kpi-cac').textContent = fmtP(M.cac);
   document.getElementById('kpi-cac-sub').textContent = `Inversión total: ${fmtP(M.totInv)}`;
   document.getElementById('kpi-mrr').textContent = fmtP(M.mrrDic);
-  document.getElementById('kpi-mrr-sub').textContent = `${fmtN(M.activosDic,0)} activos en dic · Churn MRR ${fmtN(M.churn*100,0)}% · Canc. trial ${fmtN(M.trialCancRate*100,0)}%`;
+  document.getElementById('kpi-mrr-sub').textContent = `${fmtN(M.activosDic,0)} activos en dic · Churn ${fmtN(M.churn*100,0)}% · Anclado en $613K Stripe (jun)`;
   document.getElementById('kpi-payback').textContent = fmtN(M.payback,1);
 
   // Funnel
@@ -704,6 +711,7 @@ function update() {
   }).join('');
 
   // Table
+  let _mrrAcum = 0;
   document.getElementById('main-table').innerHTML = [
     ...M.rows.map((r,i)=>{
       const cac = r.inv/r.cust;
@@ -711,6 +719,9 @@ function update() {
       const crApro = r.apro/r.aplic;
       const crTrial = r.trial/r.apro;
       const isReal = r.tipo==='real';
+      const mrrEste = isReal ? (MRR_STRIPE[r.m]||0) : (M.mrrMensual[i]?M.mrrMensual[i].mrr:0);
+      _mrrAcum += mrrEste;
+      const mrrAcumHasta = _mrrAcum;
       return `<tr class="${isReal?'real-row':'proj-row'}">
         <td>${r.mes} <span class="badge ${isReal?'badge-real':'badge-proy'}">${isReal?'REAL':'PROY'}</span></td>
         <td class="dim">${fmtP(r.inv)}</td>
@@ -723,7 +734,12 @@ function update() {
         <td>${r.backlogExtra>0?`<span style="color:var(--yellow);font-weight:600">+${fmtN(r.backlogExtra,0)}</span>`:'<span class="dim">—</span>'}</td>
         <td class="${isReal?'':'highlight'}" style="font-weight:700">${fmtN(r.cust,0)}</td>
         <td>${isFinite(cac)?fmtP(cac):'—'}</td>
-        <td>${fmtP(M.mrrMensual[i]?M.mrrMensual[i].mrr:0)}</td>
+        <td style="font-weight:${isReal?600:400};color:${isReal?'var(--green)':'var(--accent)'}">
+          ${isReal ? fmtP(MRR_STRIPE[r.m]||0) : fmtP(M.mrrMensual[i]?M.mrrMensual[i].mrr:0)}
+        </td>
+        <td style="color:var(--text2);font-size:11px">
+          ${fmtP(mrrAcumHasta)}
+        </td>
       </tr>`;
     }),
     `<tr class="total-row">
@@ -735,7 +751,8 @@ function update() {
       <td>—</td><td style="color:var(--yellow)">+${fmtN(BACKLOG,0)}</td>
       <td class="highlight">${fmtN(M.totCust,0)}</td>
       <td>${fmtP(M.cac)}</td>
-      <td>${fmtP(M.mrrAcum)}</td>
+      <td>—</td>
+      <td style="color:var(--green);font-weight:700">${fmtP(_mrrAcum)}</td>
     </tr>`
   ].join('');
 
