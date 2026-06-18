@@ -188,13 +188,13 @@
     <div class="sidebar-label">Escenario</div>
     <div class="scenario-btns">
       <button class="sc-btn" id="btn-conservador" onclick="setScenario('conservador')">
-        Conservador <span class="sc-tag">309 aplic/mes</span>
+        Conservador <span class="sc-tag">275 aplic/mes</span>
       </button>
       <button class="sc-btn active" id="btn-base" onclick="setScenario('base')">
-        Base <span class="sc-tag">+5%/mes desde 397</span>
+        Base <span class="sc-tag">+5%/mes desde 295</span>
       </button>
       <button class="sc-btn" id="btn-optimista" onclick="setScenario('optimista')">
-        Optimista <span class="sc-tag">397 aplic/mes</span>
+        Optimista <span class="sc-tag">295 aplic/mes</span>
       </button>
       <button class="sc-btn" id="btn-custom" onclick="setScenario('custom')">
         Personalizado <span class="sc-tag">desde CPA</span>
@@ -305,7 +305,7 @@
 <main class="main">
   <div class="page-header">
     <div class="page-title">Proyecciones SOMA+ 2026</div>
-    <div class="page-sub" id="scenario-desc">Base corregida 15 jun 2026 · Sin Subscribers · Proyección Jul–Dic · Inversión $1.2M MXN</div>
+    <div class="page-sub" id="scenario-desc">Fuente: Google Sheet 17 jun 2026 · CR aprobación 96% · Proyección Jul–Dic · Inversión $1.2M MXN</div>
   </div>
 
   <!-- MAIN TABS -->
@@ -429,7 +429,7 @@
   <div class="insight-strip" id="insight-strip"></div>
 
   <p style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.7">
-    Modelo basado en tasas reales Mar–May 2026 · Base corregida sin Subscribers · Churn MRR (impacto suscripciones activas) separado de tasa cancelación en trial (no genera ingreso). Backlog ~100 customers en julio.
+    Fuente: Google Sheet 17 jun 2026 · Aplicación válida = MQL+SQL+OPS+Customer · CR aprobación 96% (May-Jun) · CR trial 40% (Mar-May) · Churn MRR Stripe 15.5% separado de cancelación en trial 30%.
     CAC y MRR calculados sobre inversión sem2 definida. Actualiza los sliders para explorar escenarios.
   </p>
 
@@ -449,23 +449,23 @@
       </div>
       <div class="input-group">
         <div class="input-label" style="font-size:11px;color:var(--text2);margin-bottom:5px">Aplicantes acumulados</div>
-        <div class="input-wrap"><input type="number" id="m-aplic" value="162" min="0" oninput="updateMes()"></div>
+        <div class="input-wrap"><input type="number" id="m-aplic" value="181" min="0" oninput="updateMes()"></div>
       </div>
       <div class="input-group">
         <div class="input-label" style="font-size:11px;color:var(--text2);margin-bottom:5px">Aprobados acumulados</div>
-        <div class="input-wrap"><input type="number" id="m-apro" value="111" min="0" oninput="updateMes()"></div>
+        <div class="input-wrap"><input type="number" id="m-apro" value="173" min="0" oninput="updateMes()"></div>
       </div>
       <div class="input-group">
         <div class="input-label" style="font-size:11px;color:var(--text2);margin-bottom:5px">Trials activados</div>
-        <div class="input-wrap"><input type="number" id="m-trial" value="38" min="0" oninput="updateMes()"></div>
+        <div class="input-wrap"><input type="number" id="m-trial" value="52" min="0" oninput="updateMes()"></div>
       </div>
       <div class="input-group">
         <div class="input-label" style="font-size:11px;color:var(--text2);margin-bottom:5px">Customers acumulados</div>
-        <div class="input-wrap"><input type="number" id="m-cust" value="72" min="0" oninput="updateMes()"></div>
+        <div class="input-wrap"><input type="number" id="m-cust" value="81" min="0" oninput="updateMes()"></div>
       </div>
       <div class="input-group">
         <div class="input-label" style="font-size:11px;color:var(--text2);margin-bottom:5px">Trials pendientes (backlog)</div>
-        <div class="input-wrap"><input type="number" id="m-backlog" value="105" min="0" oninput="updateMes()"><span class="input-suffix">trials</span></div>
+        <div class="input-wrap"><input type="number" id="m-backlog" value="29" min="0" oninput="updateMes()"><span class="input-suffix">trials</span></div>
       </div>
       <div class="input-group">
         <div class="input-label" style="font-size:11px;color:var(--text2);margin-bottom:5px">Días del mes</div>
@@ -511,26 +511,27 @@
 
 <script>
 // ─── DATOS REALES ──────────────────────────────────────────────
-// Base corregida 15 jun 2026 — excluye Subscribers del conteo de aplicantes
+// Base corregida 17 jun 2026 — fuente: Google Sheet (MQL+SQL+OPS+Customer)
+// Aplicación válida = MQL+SQL+OPS+Customer | Aprobado = SQL+OPS+Customer
 const REAL = [
-  {m:1,mes:'Ene',aplic:160, apro:36,  trial:2,   cust:0,   inv:20429.68},
-  {m:2,mes:'Feb',aplic:202, apro:96,  trial:23,  cust:9,   inv:101906.75},
-  {m:3,mes:'Mar',aplic:280, apro:253, trial:60,  cust:21,  inv:117863.35},
-  {m:4,mes:'Abr',aplic:251, apro:248, trial:100, cust:85,  inv:113139.46},
-  {m:5,mes:'May',aplic:397, apro:291, trial:164, cust:135, inv:109595.62},
-  {m:6,mes:'Jun',aplic:162, apro:111, trial:38,  cust:72,  inv:100000},
+  {m:1,mes:'Ene',aplic:34,  apro:34,  trial:2,   cust:0,   inv:20429.68},
+  {m:2,mes:'Feb',aplic:96,  apro:96,  trial:23,  cust:9,   inv:101906.75},
+  {m:3,mes:'Mar',aplic:279, apro:253, trial:60,  cust:21,  inv:117863.35},
+  {m:4,mes:'Abr',aplic:250, apro:249, trial:100, cust:85,  inv:113139.46},
+  {m:5,mes:'May',aplic:295, apro:291, trial:164, cust:135, inv:109595.62},
+  {m:6,mes:'Jun',aplic:181, apro:173, trial:52,  cust:81,  inv:100000},
 ];
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-const BACKLOG = Math.round((67 + 38) * 0.951); // pendientes may(67) + jun(38) × 95.1%
+const BACKLOG = 28; // pendientes mayo (164 trial - 135 memb) × 95.1% = 28
 // MRR real de Stripe por mes (snapshot al cierre de cada mes)
 const MRR_STRIPE = {1:443330, 2:458550, 3:507380, 4:531540, 5:589760, 6:612830};
 const INV_SEM1 = REAL.reduce((a,r)=>a+r.inv,0);
 
 // ─── ESCENARIOS ────────────────────────────────────────────────
 const SCENARIOS = {
-  conservador: { label:'Conservador', desc:'Promedio Mar–May corregido (sin subs)', aplic: (inv,cpa)=>Array(6).fill(309) },
-  base:        { label:'Base',        desc:'Crecimiento +5%/mes desde mayo',        aplic: (inv,cpa)=>Array.from({length:6},(_,i)=>Math.round(397*Math.pow(1.05,i))) },
-  optimista:   { label:'Optimista',   desc:'Mayo corregido como benchmark',          aplic: (inv,cpa)=>Array(6).fill(397) },
+  conservador: { label:'Conservador', desc:'Promedio Mar–May (Sheet, MQL+SQL+OPS+Cust)', aplic: (inv,cpa)=>Array(6).fill(275) },
+  base:        { label:'Base',        desc:'Crecimiento +5%/mes desde mayo (Sheet)', aplic: (inv,cpa)=>Array.from({length:6},(_,i)=>Math.round(295*Math.pow(1.05,i))) },
+  optimista:   { label:'Optimista',   desc:'Mayo sostenido (Sheet)',                  aplic: (inv,cpa)=>Array(6).fill(295) },
   custom:      { label:'Personalizado',desc:'Calculado desde costo por aplicación',  aplic: (inv,cpa)=>Array(6).fill(Math.max(10,Math.round(inv/cpa))) },
 };
 
@@ -546,10 +547,10 @@ function setScenario(s) {
 function resetDefaults() {
   document.getElementById('inp-inv').value = 100000;
   document.getElementById('inp-precio').value = 1500;
-  document.getElementById('inp-cr-apro').value = 71;
-  document.getElementById('inp-cr-trial').value = 41;
+  document.getElementById('inp-cr-apro').value = 96;
+  document.getElementById('inp-cr-trial').value = 40;
   document.getElementById('inp-cr-conv').value = 95;
-  document.getElementById('inp-cpa').value = 383;
+  document.getElementById('inp-cpa').value = 413;
   document.getElementById('inp-churn').value = 15;
   document.getElementById('inp-trial-canc').value = 30;
   setScenario('base');
@@ -838,8 +839,8 @@ function switchMainTab(tab) {
 }
 
 // ─── PROYECCIÓN MENSUAL ───────────────────────────────────────
-const HIST_AVG = { aplic:309.3, apro:264.0, trial:108.0, cust:80.3 }; // Mar-May corregido sin subs
-const HIST_BEST = { aplic:397, apro:291, trial:164, cust:135 }; // Mayo corregido sin subs
+const HIST_AVG = { aplic:274.7, apro:264.3, trial:108.0, cust:80.3 }; // Mar-May Sheet (MQL+SQL+OPS+Cust)
+const HIST_BEST = { aplic:295, apro:291, trial:164, cust:135 }; // Mayo Sheet
 const TC = 0.946;
 
 function updateMes() {
