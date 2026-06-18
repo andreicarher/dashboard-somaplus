@@ -282,6 +282,31 @@
   </div>
 
   <div class="sidebar-section">
+    <div class="sidebar-label">Reactivación MRR</div>
+    <div class="input-group">
+      <div class="input-label">Reactivación mensual <span id="lbl-reac"></span></div>
+      <div class="input-wrap">
+        <span class="input-prefix">$</span>
+        <input type="number" id="inp-reac" value="51472" min="0" max="200000" step="1000" oninput="update()">
+        <span class="input-suffix">MXN</span>
+      </div>
+    </div>
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;margin-top:4px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <div>
+          <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Activos equiv./mes</div>
+          <div style="font-family:var(--mono);font-size:14px;font-weight:600;color:var(--green)" id="lbl-reac-activos">—</div>
+        </div>
+        <div>
+          <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Ratio entrada/pérdida</div>
+          <div style="font-family:var(--mono);font-size:14px;font-weight:600;color:var(--accent)" id="lbl-ratio">—</div>
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--text3);margin-top:6px">Promedio real Ene–Jun: $51,472/mes · Sin reactivación el ratio sería 0.81x</div>
+    </div>
+  </div>
+
+  <div class="sidebar-section">
     <div class="sidebar-label">Costo por aplicación</div>
     <div class="input-group">
       <div class="input-label">Costo por aplicación <span id="lbl-cpa"></span></div>
@@ -553,6 +578,7 @@ function resetDefaults() {
   document.getElementById('inp-cpa').value = 413;
   document.getElementById('inp-churn').value = 15;
   document.getElementById('inp-trial-canc').value = 30;
+  document.getElementById('inp-reac').value = 51472;
   setScenario('base');
 }
 
@@ -571,6 +597,8 @@ function buildModel() {
   const crConv       = Number(document.getElementById('inp-cr-conv').value)/100;
   const cpa          = Math.max(1, Number(document.getElementById('inp-cpa').value));
   const trialCancRate = Number(document.getElementById('inp-trial-canc').value)/100;
+  const churn        = Number(document.getElementById('inp-churn').value)/100;
+  const reacMRR      = Number(document.getElementById('inp-reac').value) || 0;
   const aplicList    = SCENARIOS[currentScenario].aplic(invSem2, cpa);
   const aplicDerived = Math.round(invSem2 / cpa);
 
@@ -582,13 +610,14 @@ function buildModel() {
   document.getElementById('lbl-precio').textContent = fmtP(precio);
   document.getElementById('lbl-cpa').textContent = fmtP(cpa);
   document.getElementById('lbl-aplic-derivado').textContent = fmtN(aplicDerived,0) + ' aplic/mes';
-  const churnVal = Number(document.getElementById('inp-churn').value)/100;
-  document.getElementById('lbl-churn').textContent = fmtN(churnVal*100,0)+'%';
+  document.getElementById('lbl-churn').textContent = fmtN(churn*100,0)+'%';
   document.getElementById('lbl-trial-canc').textContent = fmtN(trialCancRate*100,0)+'%';
-  document.getElementById('lbl-ltv-real').textContent = fmtP(precio/churnVal);
-  document.getElementById('lbl-vida').textContent = fmtN(1/churnVal,1)+' meses';
+  document.getElementById('lbl-ltv-real').textContent = fmtP(precio/churn);
+  document.getElementById('lbl-vida').textContent = fmtN(1/churn,1)+' meses';
   document.getElementById('lbl-pct-pagan').textContent = fmtN((1-trialCancRate)*100,1)+'%';
-  document.getElementById('lbl-retencion').textContent = fmtN((1-churnVal)*100,1)+'%';
+  document.getElementById('lbl-retencion').textContent = fmtN((1-churn)*100,1)+'%';
+  document.getElementById('lbl-reac').textContent = fmtP(reacMRR);
+  document.getElementById('lbl-reac-activos').textContent = fmtN(reacMRR/904,0)+' activos';
 
   const rows = REAL.map(r=>({...r,tipo:'real',custPropio:r.cust,backlogExtra:0}));
   for (let i=0;i<6;i++) {
@@ -611,7 +640,7 @@ function buildModel() {
   const totAplic = rows.reduce((a,r)=>a+r.aplic,0);
   const totTrial = rows.reduce((a,r)=>a+r.trial,0);
   const cac     = totInv/totCust;
-  const churn   = Number(document.getElementById('inp-churn').value)/100;
+  const expansion   = 2722; // promedio real Stripe Ene-Jun (constante)
 
   // ── MRR con churn acumulado mes a mes ──────────────────────────
   // Partimos de los customers reales al inicio de julio (~322 activos sem1)
@@ -623,14 +652,24 @@ function buildModel() {
   const PRECIO_STRIPE_PROM = 904;
   rows.forEach((r,i) => {
     if (r.tipo === 'real') {
-      // Meses reales: anclar al MRR de Stripe para que la proyección parta correcto
+      // Meses reales: anclar al MRR real de Stripe
       const mrrReal = MRR_STRIPE[r.m] || 0;
       activosMes = mrrReal > 0 ? Math.round(mrrReal / PRECIO_STRIPE_PROM) : activosMes;
-      mrrMensual.push({ mes: r.mes, activos: activosMes, mrr: mrrReal });
+      mrrMensual.push({ mes: r.mes, activos: activosMes, mrr: mrrReal,
+                        mrrNuevo: 0, mrrReac: 0, mrrPerdida: 0, mrrNeto: 0 });
     } else {
-      // Meses proyectados: churn sobre base de Stripe (precio prom real)
-      activosMes = Math.round(activosMes * (1 - churn) + r.cust);
-      mrrMensual.push({ mes: r.mes, activos: activosMes, mrr: activosMes * PRECIO_STRIPE_PROM });
+      // Meses proyectados: MRR Movement con 4 componentes
+      // Nuevo MRR = customers nuevos × precio promedio
+      const mrrNuevo   = r.cust * PRECIO_STRIPE_PROM;
+      const mrrReac    = reacMRR;
+      const mrrExpan   = expansion;
+      const mrrPerdida = activosMes * PRECIO_STRIPE_PROM * churn;
+      const mrrNeto    = mrrNuevo + mrrReac + mrrExpan - mrrPerdida;
+      const mrrAnterior = activosMes * PRECIO_STRIPE_PROM;
+      const mrrFin     = mrrAnterior + mrrNeto;
+      activosMes = Math.round(mrrFin / PRECIO_STRIPE_PROM);
+      mrrMensual.push({ mes: r.mes, activos: activosMes, mrr: mrrFin,
+                        mrrNuevo, mrrReac, mrrPerdida, mrrNeto });
     }
   });
 
@@ -649,7 +688,7 @@ function buildModel() {
   const sem1Cust = REAL.reduce((a,r)=>a+r.cust,0);
 
   return { rows, totInv, totCust, totAplic, totTrial, cac, mrr, mrrDic, mrrAcum, activosDic,
-           payback, ltv, ltvCac, roi, vidaMeses, churn, trialCancRate,
+           payback, ltv, ltvCac, roi, vidaMeses, churn, trialCancRate, reacMRR,
            sem1Cust, sem2Cust, crApro, crTrial, crConv, precio, invSem2, aplicList, cpa, mrrMensual };
 }
 
@@ -657,9 +696,21 @@ function buildModel() {
 function update() {
   const M = buildModel();
 
+  // Ratio entrada/pérdida (necesita M — se calcula aquí)
+  const perdidaProm = M.mrrMensual.filter(m=>m.mrrPerdida>0).reduce((a,m)=>a+m.mrrPerdida,0) /
+                      Math.max(1, M.mrrMensual.filter(m=>m.mrrPerdida>0).length);
+  const entradaProm = M.mrrMensual.filter(m=>m.mrrNuevo>0).reduce((a,m)=>a+m.mrrNuevo+m.mrrReac,0) /
+                      Math.max(1, M.mrrMensual.filter(m=>m.mrrNuevo>0).length);
+  const ratio = perdidaProm > 0 ? entradaProm/perdidaProm : 0;
+  const ratioEl = document.getElementById('lbl-ratio');
+  if (ratioEl) {
+    ratioEl.textContent = fmtN(ratio,2)+'x';
+    ratioEl.style.color = ratio>=1.3?'var(--green)':ratio>=1.0?'var(--yellow)':'var(--red)';
+  }
+
   // Scenario desc
   document.getElementById('scenario-desc').textContent =
-    `${SCENARIOS[currentScenario].label}: ${SCENARIOS[currentScenario].desc} · ${fmtN(M.aplicList[0],0)} aplic/mes · CPA ${fmtP(M.cpa)} · Canc. trial ${fmtN(M.trialCancRate*100,0)}% · Churn MRR ${fmtN(M.churn*100,0)}%`;
+    `${SCENARIOS[currentScenario].label}: ${SCENARIOS[currentScenario].desc} · ${fmtN(M.aplicList[0],0)} aplic/mes · Reac. ${fmtP(M.reacMRR)}/mes · Churn ${fmtN(M.churn*100,0)}%`;
 
   // KPIs
   document.getElementById('kpi-cust').textContent = fmtN(M.totCust,0);
@@ -667,7 +718,9 @@ function update() {
   document.getElementById('kpi-cac').textContent = fmtP(M.cac);
   document.getElementById('kpi-cac-sub').textContent = `Inversión total: ${fmtP(M.totInv)}`;
   document.getElementById('kpi-mrr').textContent = fmtP(M.mrrDic);
-  document.getElementById('kpi-mrr-sub').textContent = `${fmtN(M.activosDic,0)} activos en dic · Churn ${fmtN(M.churn*100,0)}% · Anclado en $613K Stripe (jun)`;
+  const netoProyMes = M.mrrMensual.filter(x=>x.mrrNeto!==0).reduce((a,x)=>a+x.mrrNeto,0) /
+    Math.max(1,M.mrrMensual.filter(x=>x.mrrNeto!==0).length);
+  document.getElementById('kpi-mrr-sub').textContent = `${fmtN(M.activosDic,0)} activos en dic · Neto proy: ${fmtP(netoProyMes)}/mes · Reac. ${fmtP(M.reacMRR)}/mes`;
   document.getElementById('kpi-payback').textContent = fmtN(M.payback,1);
 
   // Funnel
@@ -771,6 +824,7 @@ function update() {
   // Sensitivity: +10% en cada variable
   const sensItems = [
     { label:'Inversión +10%',              fn:()=>{ const m2=buildModelWith({invSem2:M.invSem2*1.1}); return m2.totCust-M.totCust; }},
+    { label:'Reactivación +20%',           fn:()=>{ const m2=buildModelWith({reacMRR:M.reacMRR*1.2}); return (m2.mrrDic-M.mrrDic)/904; }},
     { label:'Costo/aplic -10%',            fn:()=>{ const m2=buildModelWith({cpa:M.cpa*0.9}); return m2.totCust-M.totCust; }},
     { label:'CR Aprobación +10pts',        fn:()=>{ const m2=buildModelWith({crApro:Math.min(0.99,M.crApro+0.1)}); return m2.totCust-M.totCust; }},
     { label:'CR Trial +10pts',             fn:()=>{ const m2=buildModelWith({crTrial:Math.min(0.99,M.crTrial+0.1)}); return m2.totCust-M.totCust; }},
@@ -813,20 +867,29 @@ function buildModelWith(overrides={}) {
   const crConv  = overrides.crConv  || Number(document.getElementById('inp-cr-conv').value)/100;
   const precio  = Number(document.getElementById('inp-precio').value);
   const cpa     = overrides.cpa || Math.max(1, Number(document.getElementById('inp-cpa').value));
-  const trialCancRate = overrides.trialCancRate || Number(document.getElementById('inp-trial-canc').value)/100;
+  const trialCancRate = overrides.trialCancRate !== undefined ? overrides.trialCancRate : Number(document.getElementById('inp-trial-canc').value)/100;
+  const churn    = overrides.churn !== undefined ? overrides.churn : Number(document.getElementById('inp-churn').value)/100;
+  const reacMRR  = overrides.reacMRR !== undefined ? overrides.reacMRR : (Number(document.getElementById('inp-reac').value)||0);
   const aplicMult = overrides.aplicMult || 1;
   const aplicList = SCENARIOS[currentScenario].aplic(invSem2, cpa).map(v=>Math.round(v*aplicMult));
 
   let totCust=REAL.reduce((a,r)=>a+r.cust,0);
+  let activosBW = Math.round(612830/904);
+  let mrrDicBW = 612830;
   for(let i=0;i<6;i++){
     const aplic=aplicList[i]; const apro=Math.round(aplic*crApro);
     const trialIni=Math.round(apro*crTrial);
     const trialPagan=Math.round(trialIni*(1-trialCancRate));
     const extra=i===0?BACKLOG:0;
-    totCust+=trialPagan*crConv+extra;
+    const custs=trialPagan*crConv+extra;
+    totCust+=custs;
+    const mrrNuevo=custs*904; const mrrPerdida=activosBW*904*churn;
+    const neto=mrrNuevo+reacMRR+2722-mrrPerdida;
+    activosBW=Math.round((activosBW*904+neto)/904);
+    mrrDicBW=activosBW*904;
   }
   const totInv=INV_SEM1+invSem2*6;
-  return {totCust, totInv, cac:totInv/totCust};
+  return {totCust, totInv, cac:totInv/totCust, mrrDic:mrrDicBW};
 }
 
 // ─── MAIN TAB SWITCH ──────────────────────────────────────────
